@@ -1,0 +1,38 @@
+                  {/* OT */}
+                    {!activeProjectConfig.disabledCores?.includes("poOT") && (<>
+                    <td className="text-right bg-amber-50/10 border-x px-3">
+                      {row.poOT.toLocaleString()}
+                    </td>
+                    <td className="text-right bg-amber-50/10 border-x px-3">
+                      {row.actualOT.toLocaleString()}
+                    </td>
+                    <td
+                      className={cn(
+                        "text-right bg-amber-50/10 border-x px-3 font-bold",
+                        balOT < 0 ? "text-danger" : "text-success",
+                      )}
+                    >
+                      {balOT.toLocaleString()}
+                    </td>
+                    <td className="text-right bg-amber-50/10 border-x px-3 text-slate-500 font-medium">
+                      {(row.poOT * go).toLocaleString(undefined, {
+                        maximumFractionDigits: 0,
+                      })}
+                    </td>
+                    <td className="text-right bg-amber-50/10 border-x px-3 text-slate-500 font-medium">
+                      {(row.actualOT * go).toLocaleString(undefined, {
+                        maximumFractionDigits: 0,
+                      })}
+                    </td>
+                    <td
+                      className={cn(
+                        "text-right bg-amber-50/10 border-x px-3 font-bold",
+                        balOTGross < 0 ? "text-danger" : "text-success",
+                      )}
+                    >
+                      {balOTGross.toLocaleString(undefined, {
+                        maximumFractionDigits: 0,
+                      })}
+                    </td>
+
+                    </>)}

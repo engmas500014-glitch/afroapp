@@ -1,0 +1,18 @@
+                  {/* Medical */}
+                    {!activeProjectConfig.disabledCores?.includes("poMedical") && (<>
+                    <td className="text-right bg-rose-50/10 border-x px-3">
+                      {row.poMedical.toLocaleString()}
+                    </td>
+                    <td className="text-right bg-rose-50/10 border-x px-3 font-medium">
+                      {row.actualMedical.toLocaleString()}
+                    </td>
+                    <td
+                      className={cn(
+                        "text-right bg-rose-50/10 border-x px-3 font-bold",
+                        balMedical < 0 ? "text-danger" : "text-success",
+                      )}
+                    >
+                      {balMedical.toLocaleString()}
+                    </td>
+
+                    </>)}

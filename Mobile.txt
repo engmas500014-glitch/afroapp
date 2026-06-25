@@ -1,0 +1,18 @@
+                  {/* Mobile */}
+                    {!activeProjectConfig.disabledCores?.includes("poMobile") && (<>
+                    <td className="text-right bg-cyan-50/10 border-x px-3">
+                      {row.poMobile.toLocaleString()}
+                    </td>
+                    <td className="text-right bg-cyan-50/10 border-x px-3">
+                      {row.mobileAllowance.toLocaleString()}
+                    </td>
+                    <td
+                      className={cn(
+                        "text-right bg-cyan-50/10 border-x px-3 font-bold",
+                        balMobile < 0 ? "text-danger" : "text-success",
+                      )}
+                    >
+                      {balMobile.toLocaleString()}
+                    </td>
+
+                    </>)}

@@ -1,0 +1,38 @@
+                  {/* Salaries */}
+                    {!activeProjectConfig.disabledCores?.includes("poSalaries") && (<>
+                    <td className="text-right bg-blue-50/10 border-x px-3">
+                      {row.poSalaries.toLocaleString()}
+                    </td>
+                    <td className="text-right bg-blue-50/10 border-x px-3">
+                      {row.actualSalaries.toLocaleString()}
+                    </td>
+                    <td
+                      className={cn(
+                        "text-right bg-blue-50/10 border-x px-3 font-bold",
+                        balSal < 0 ? "text-danger" : "text-success",
+                      )}
+                    >
+                      {balSal.toLocaleString()}
+                    </td>
+                    <td className="text-right bg-blue-50/10 border-x px-3 text-slate-500 font-medium">
+                      {(row.poSalaries * grossMult).toLocaleString(undefined, {
+                        maximumFractionDigits: 0,
+                      })}
+                    </td>
+                    <td className="text-right bg-blue-50/10 border-x px-3 text-slate-500 font-medium">
+                      {(row.actualSalaries * grossMult).toLocaleString(undefined, {
+                        maximumFractionDigits: 0,
+                      })}
+                    </td>
+                    <td
+                      className={cn(
+                        "text-right bg-blue-50/10 border-x px-3 font-bold",
+                        balSalGross < 0 ? "text-danger" : "text-success",
+                      )}
+                    >
+                      {balSalGross.toLocaleString(undefined, {
+                        maximumFractionDigits: 0,
+                      })}
+                    </td>
+
+                    </>)}

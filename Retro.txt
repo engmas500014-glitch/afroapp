@@ -1,0 +1,38 @@
+                  {/* Retro */}
+                    {!activeProjectConfig.disabledCores?.includes("poRetro") && (<>
+                    <td className="text-right bg-indigo-50/10 border-x px-3">
+                      {row.poRetro.toLocaleString()}
+                    </td>
+                    <td className="text-right bg-indigo-50/10 border-x px-3">
+                      {row.actualRetro.toLocaleString()}
+                    </td>
+                    <td
+                      className={cn(
+                        "text-right bg-indigo-50/10 border-x px-3 font-bold",
+                        balRetro < 0 ? "text-danger" : "text-success",
+                      )}
+                    >
+                      {balRetro.toLocaleString()}
+                    </td>
+                    <td className="text-right bg-indigo-50/10 border-x px-3 text-slate-500 font-medium">
+                      {(row.poRetro * gr).toLocaleString(undefined, {
+                        maximumFractionDigits: 0,
+                      })}
+                    </td>
+                    <td className="text-right bg-indigo-50/10 border-x px-3 text-slate-500 font-medium">
+                      {(row.actualRetro * gr).toLocaleString(undefined, {
+                        maximumFractionDigits: 0,
+                      })}
+                    </td>
+                    <td
+                      className={cn(
+                        "text-right bg-indigo-50/10 border-x px-3 font-bold",
+                        balRetroGross < 0 ? "text-danger" : "text-success",
+                      )}
+                    >
+                      {balRetroGross.toLocaleString(undefined, {
+                        maximumFractionDigits: 0,
+                      })}
+                    </td>
+
+                    </>)}

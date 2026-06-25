@@ -1,0 +1,30 @@
+                  {/* Laptop */}
+                    {!activeProjectConfig.disabledCores?.includes("poLaptop") && (<>
+                    <td className="text-right bg-teal-50/10 border-x px-3">
+                      {row.poLaptop.toLocaleString()}
+                    </td>
+                    <td className="text-right bg-teal-50/10 border-x px-3 p-0">
+                      <input
+                        type="number"
+                        step="any"
+                        value={row.actualLaptop}
+                        onChange={(e) =>
+                          handleInlineUpdate(
+                            row.id,
+                            "actualLaptop",
+                            Number(e.target.value),
+                          )
+                        }
+                        className="w-full h-10 bg-transparent text-right outline-none px-3 focus:bg-card-bg transition-colors"
+                      />
+                    </td>
+                    <td
+                      className={cn(
+                        "text-right bg-teal-50/10 border-x px-3 font-bold",
+                        balLaptop < 0 ? "text-danger" : "text-success",
+                      )}
+                    >
+                      {balLaptop.toLocaleString()}
+                    </td>
+
+                    </>)}

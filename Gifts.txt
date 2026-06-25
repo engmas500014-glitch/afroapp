@@ -1,0 +1,18 @@
+                  {/* Gifts */}
+                    {!activeProjectConfig.disabledCores?.includes("poGifts") && (<>
+                    <td className="text-right bg-emerald-50/10 border-x px-3">
+                      {row.poGifts.toLocaleString()}
+                    </td>
+                    <td className="text-right bg-emerald-50/10 border-x px-3">
+                      {row.actualGift.toLocaleString()}
+                    </td>
+                    <td
+                      className={cn(
+                        "text-right bg-emerald-50/10 border-x px-3 font-bold",
+                        balGifts < 0 ? "text-danger" : "text-success",
+                      )}
+                    >
+                      {balGifts.toLocaleString()}
+                    </td>
+
+                    </>)}

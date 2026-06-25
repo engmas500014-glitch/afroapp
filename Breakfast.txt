@@ -1,0 +1,30 @@
+                  {/* Breakfast */}
+                    {!activeProjectConfig.disabledCores?.includes("poBreakfast") && (<>
+                    <td className="text-right bg-orange-50/10 border-x px-3">
+                      {row.poBreakfast.toLocaleString()}
+                    </td>
+                    <td className="text-right bg-orange-50/10 border-x px-3 p-0">
+                      <input
+                        type="number"
+                        step="any"
+                        value={row.actualBreakfast}
+                        onChange={(e) =>
+                          handleInlineUpdate(
+                            row.id,
+                            "actualBreakfast",
+                            Number(e.target.value),
+                          )
+                        }
+                        className="w-full h-10 bg-transparent text-right outline-none px-3 focus:bg-card-bg transition-colors"
+                      />
+                    </td>
+                    <td
+                      className={cn(
+                        "text-right bg-orange-50/10 border-x px-3 font-bold",
+                        balBreakfast < 0 ? "text-danger" : "text-success",
+                      )}
+                    >
+                      {balBreakfast.toLocaleString()}
+                    </td>
+
+                    </>)}

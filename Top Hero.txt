@@ -1,0 +1,39 @@
+                  {/* Top Hero */}
+                    {!activeProjectConfig.disabledCores?.includes("poTopHero") && (<>
+                    <td className="text-right bg-slate-50/30 border-x px-3">
+                      {row.poTopHero.toLocaleString()}
+                    </td>
+                    <td className="text-right bg-slate-50/30 border-x px-3 font-medium">
+                      {row.actualTopHero.toLocaleString()}
+                    </td>
+                    <td
+                      className={cn(
+                        "text-right bg-slate-50/30 border-x px-3 font-bold",
+                        balHero < 0 ? "text-danger" : "text-success",
+                      )}
+                    >
+                      {balHero.toLocaleString()}
+                    </td>
+                    <td className="text-right bg-slate-50/30 border-x px-3 text-slate-500 font-medium">
+                      {(row.poTopHero * gth).toLocaleString(undefined, {
+                        maximumFractionDigits: 0,
+                      })}
+                    </td>
+                    <td className="text-right bg-slate-50/30 border-x px-3 text-slate-500 font-medium">
+                      {((row.actualTopHero || 0) * gth).toLocaleString(
+                        undefined,
+                        { maximumFractionDigits: 0 },
+                      )}
+                    </td>
+                    <td
+                      className={cn(
+                        "text-right bg-slate-50/30 border-x px-3 font-bold",
+                        balHeroGross < 0 ? "text-danger" : "text-success",
+                      )}
+                    >
+                      {balHeroGross.toLocaleString(undefined, {
+                        maximumFractionDigits: 0,
+                      })}
+                    </td>
+
+                    </>)}

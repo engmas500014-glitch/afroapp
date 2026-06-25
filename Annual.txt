@@ -1,0 +1,30 @@
+                  {/* Annual */}
+                    {!activeProjectConfig.disabledCores?.includes("poAnnual") && (<>
+                    <td className="text-right bg-purple-50/10 border-x px-3">
+                      {row.poAnnual.toLocaleString()}
+                    </td>
+                    <td className="text-right bg-purple-50/10 border-x px-3 p-0">
+                      <input
+                        type="number"
+                        step="any"
+                        value={row.actualAnnual}
+                        onChange={(e) =>
+                          handleInlineUpdate(
+                            row.id,
+                            "actualAnnual",
+                            Number(e.target.value),
+                          )
+                        }
+                        className="w-full h-10 bg-transparent text-right outline-none px-3 focus:bg-card-bg transition-colors"
+                      />
+                    </td>
+                    <td
+                      className={cn(
+                        "text-right bg-purple-50/10 border-x px-3 font-bold",
+                        balAnnual < 0 ? "text-danger" : "text-success",
+                      )}
+                    >
+                      {balAnnual.toLocaleString()}
+                    </td>
+
+                    </>)}
