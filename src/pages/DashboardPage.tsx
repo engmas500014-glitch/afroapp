@@ -1,7 +1,7 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui";
 import { useAppContext } from "../store/AppContext";
-import { Users, DollarSign, Activity, Wallet } from "lucide-react";
+import { Users, DollarSign, Activity, Wallet, Calendar, Filter } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -19,6 +19,38 @@ import { parseFlexibleDate } from "../lib/utils";
 export function DashboardPage() {
   const { visibleEmployees: employees, visiblePoBudgets: poBudgets, salaryOverrides, finConfig } = useAppContext();
 
+  // Dynamic selector states
+  const uniqueAccounts = Array.from(
+    new Set([
+      ...poBudgets.map((p) => p.account)
+    ].filter(Boolean)),
+  ).sort();
+
+  const [selectedAccount, setSelectedAccount] = React.useState<string>("All");
+  const [selectedProject, setSelectedProject] = React.useState<string>("All");
+
+  const uniqueProjects = Array.from(
+    new Set(
+      poBudgets
+        .filter((p) => selectedAccount === "All" || p.account === selectedAccount)
+        .map((p) => p.project)
+        .filter(Boolean)
+    )
+  ).sort();
+
+  const availableYears: number[] = Array.from(new Set(poBudgets.map((b) => Number(b.year))));
+  if (availableYears.length === 0) {
+    availableYears.push(new Date().getFullYear());
+  }
+  availableYears.sort((a: number, b: number) => b - a);
+
+  // Default to current year if available, otherwise latest available year
+  const defaultYear = availableYears.includes(new Date().getFullYear())
+    ? new Date().getFullYear()
+    : (availableYears[0] || new Date().getFullYear());
+
+  const [selectedYear, setSelectedYear] = React.useState<number>(defaultYear);
+
   const getGrossMultiplier = (projectName: string | undefined, key: string) => {
     const p = projectName && projectName !== "All" ? projectName : "default";
     const config = finConfig[p] || finConfig["default"] || {};
@@ -32,16 +64,24 @@ export function DashboardPage() {
     return 1 + (pct / 100);
   };
 
-  const activeEmployees = employees.filter((e) => e.status === "Active").length;
-  const totalSalaries = employees
-    .filter((e) => e.status === "Active")
-    .reduce((sum, e) => sum + e.netSalary, 0);
+  // Filter active employees based on current account and project
+  const activeEmployees = employees.filter((e) => {
+    if (e.status !== "Active") return false;
+    if (selectedAccount !== "All" && e.account !== selectedAccount) return false;
+    if (selectedProject !== "All" && e.project !== selectedProject) return false;
+    return true;
+  }).length;
 
-  const currentYearBudgets = poBudgets.filter(
-    (p) => p.year === new Date().getFullYear(),
-  );
+  // Filter budgets based on filters
+  let filteredBudgets = poBudgets.filter((p) => p.year === selectedYear);
+  if (selectedAccount !== "All") {
+    filteredBudgets = filteredBudgets.filter((p) => p.account === selectedAccount);
+  }
+  if (selectedProject !== "All") {
+    filteredBudgets = filteredBudgets.filter((p) => p.project === selectedProject);
+  }
 
-  const computedBudgets = currentYearBudgets.map((budget) => {
+  const computedBudgets = filteredBudgets.map((budget) => {
     const monthIndex = [
       "Jan",
       "Feb",
@@ -182,52 +222,108 @@ export function DashboardPage() {
     0,
   );
   const remainingBudget = totalPOAmount - totalCost;
-  const burnRate = totalPOAmount ? (totalCost / totalPOAmount) * 100 : 0;
 
-  const chartData = computedBudgets.map((po) => ({
-    month: po.month,
-    PO: po.poAmount,
-    Actual: po.totalActualCost,
-  }));
+  // Chronologically sort monthly chart data
+  const monthsOrder = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const chartData = [...computedBudgets]
+    .sort((a, b) => monthsOrder.indexOf(a.month) - monthsOrder.indexOf(b.month))
+    .map((po) => ({
+      month: po.month,
+      PO: po.poAmount,
+      Actual: po.totalActualCost,
+    }));
 
   const statCards = [
     {
       title: "Active Employees",
       value: activeEmployees,
       icon: Users,
-      color: "text-blue-600",
-      bg: "bg-blue-100",
+      color: "text-blue-600 dark:text-blue-400",
+      bg: "bg-blue-100 dark:bg-blue-900/30",
     },
     {
       title: "Total PO Amount (YTD)",
       value: `${totalPOAmount.toLocaleString()}`,
       icon: DollarSign,
-      color: "text-emerald-600",
-      bg: "bg-emerald-100",
+      color: "text-emerald-600 dark:text-emerald-400",
+      bg: "bg-emerald-100 dark:bg-emerald-900/30",
     },
     {
       title: "Total Actual Cost",
       value: `${totalCost.toLocaleString()}`,
       icon: Activity,
-      color: "text-amber-600",
-      bg: "bg-amber-100",
+      color: "text-amber-600 dark:text-amber-400",
+      bg: "bg-amber-100 dark:bg-amber-900/30",
     },
     {
       title: "Remaining Budget",
       value: `${remainingBudget.toLocaleString()}`,
       icon: Wallet,
-      color: "text-purple-600",
-      bg: "bg-purple-100",
+      color: "text-purple-600 dark:text-purple-400",
+      bg: "bg-purple-100 dark:bg-purple-900/30",
     },
   ];
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">Dashboard</h2>
-        <p className="text-muted-fg">Overview of HR and Financial metrics.</p>
+      {/* Header with Title and Filters */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Dashboard</h2>
+          <p className="text-muted-fg">Overview of HR and Financial metrics.</p>
+        </div>
+
+        {/* Filters Panel */}
+        <div className="flex flex-wrap items-center gap-2 bg-card-bg p-2 rounded-xl border border-border shadow-sm">
+          <div className="flex items-center gap-1.5 px-2 text-xs font-bold uppercase tracking-wider text-muted-fg">
+            <Filter className="w-3.5 h-3.5 text-accent" />
+            <span>Filters</span>
+          </div>
+          
+          <select
+            className="border-border rounded-lg text-xs py-1.5 px-2.5 focus:outline-none focus:ring-1 focus:ring-accent border bg-card-bg text-ink"
+            value={selectedAccount}
+            onChange={(e) => {
+              setSelectedAccount(e.target.value);
+              setSelectedProject("All");
+            }}
+          >
+            <option value="All">All Accounts</option>
+            {uniqueAccounts.map((acc) => (
+              <option key={acc} value={acc}>
+                {acc}
+              </option>
+            ))}
+          </select>
+
+          <select
+            className="border-border rounded-lg text-xs py-1.5 px-2.5 focus:outline-none focus:ring-1 focus:ring-accent border bg-card-bg text-ink"
+            value={selectedProject}
+            onChange={(e) => setSelectedProject(e.target.value)}
+          >
+            <option value="All">All Projects</option>
+            {uniqueProjects.map((proj) => (
+              <option key={proj} value={proj}>
+                {proj}
+              </option>
+            ))}
+          </select>
+
+          <select
+            className="border-border rounded-lg text-xs py-1.5 px-2.5 focus:outline-none focus:ring-1 focus:ring-accent border bg-card-bg text-ink font-medium"
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(Number(e.target.value))}
+          >
+            {availableYears.map((year) => (
+              <option key={year} value={year}>
+                {year}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
+      {/* Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((stat, i) => (
           <Card
@@ -242,7 +338,7 @@ export function DashboardPage() {
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-fg mb-1">
                   {stat.title}
                 </p>
-                <h4 className="text-2xl font-bold tracking-tight text-slate-900">
+                <h4 className="text-2xl font-bold tracking-tight text-ink">
                   {stat.value}
                 </h4>
               </div>
@@ -251,61 +347,63 @@ export function DashboardPage() {
         ))}
       </div>
 
+      {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
             <CardTitle>PO vs Actual Cost (Monthly)</CardTitle>
           </CardHeader>
           <CardContent className="h-[300px] w-full min-h-[300px]">
-            {chartData && (chartData.length === 0 || chartData.every(d => d.po === 0 && d.actual === 0)) ? (
+            {chartData && (chartData.length === 0 || chartData.every(d => (d.PO || 0) === 0 && (d.Actual || 0) === 0)) ? (
               <div className="flex h-full w-full items-center justify-center text-sm italic text-muted-fg">No data to display</div>
             ) : (
-            <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
-              <BarChart
-                data={chartData}
-                margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-              >
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  vertical={false}
-                  stroke="var(--color-border)"
-                />
-                <XAxis
-                  dataKey="month"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 12 }}
-                  dy={10}
-                />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 12 }}
-                  tickFormatter={(val) => `${val / 1000}k`}
-                />
-                <Tooltip
-                  cursor={{ fill: "var(--color-muted)" }}
-                  contentStyle={{
-                    borderRadius: "8px",
-                    border: "1px solid var(--color-border)",
-                    backgroundColor: "var(--color-card-bg)",
-                    boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
-                  }}
-                />
-                <Bar
-                  dataKey="PO"
-                  fill="var(--color-muted-fg)"
-                  radius={[4, 4, 0, 0]}
-                  barSize={30}
-                />
-                <Bar
-                  dataKey="Actual"
-                  fill="var(--color-accent)"
-                  radius={[4, 4, 0, 0]}
-                  barSize={30}
-                />
-              </BarChart>
-            </ResponsiveContainer>
+              <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                <BarChart
+                  data={chartData}
+                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                >
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    vertical={false}
+                    stroke="var(--color-border)"
+                  />
+                  <XAxis
+                    dataKey="month"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 12, fill: "var(--color-muted-fg)" }}
+                    dy={10}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 12, fill: "var(--color-muted-fg)" }}
+                    tickFormatter={(val) => `${val / 1000}k`}
+                  />
+                  <Tooltip
+                    cursor={{ fill: "var(--color-muted)" }}
+                    contentStyle={{
+                      borderRadius: "8px",
+                      border: "1px solid var(--color-border)",
+                      backgroundColor: "var(--color-card-bg)",
+                      color: "var(--color-ink)",
+                      boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+                    }}
+                  />
+                  <Bar
+                    dataKey="PO"
+                    fill="var(--color-muted-fg)"
+                    radius={[4, 4, 0, 0]}
+                    barSize={30}
+                  />
+                  <Bar
+                    dataKey="Actual"
+                    fill="var(--color-accent)"
+                    radius={[4, 4, 0, 0]}
+                    barSize={30}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
             )}
           </CardContent>
         </Card>
@@ -315,50 +413,51 @@ export function DashboardPage() {
             <CardTitle>Expenditure Trend</CardTitle>
           </CardHeader>
           <CardContent className="h-[300px] w-full min-h-[300px]">
-            {chartData && (chartData.length === 0 || chartData.every(d => d.po === 0 && d.actual === 0)) ? (
+            {chartData && (chartData.length === 0 || chartData.every(d => (d.PO || 0) === 0 && (d.Actual || 0) === 0)) ? (
               <div className="flex h-full w-full items-center justify-center text-sm italic text-muted-fg">No data to display</div>
             ) : (
-            <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
-              <LineChart
-                data={chartData}
-                margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-              >
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  vertical={false}
-                  stroke="var(--color-border)"
-                />
-                <XAxis
-                  dataKey="month"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 12 }}
-                  dy={10}
-                />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 12 }}
-                  tickFormatter={(val) => `${val / 1000}k`}
-                />
-                <Tooltip
-                  contentStyle={{
-                    borderRadius: "8px",
-                    border: "1px solid var(--color-border)",
-                    backgroundColor: "var(--color-card-bg)",
-                    boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
-                  }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="Actual"
-                  stroke="var(--color-success)"
-                  strokeWidth={3}
-                  dot={{ r: 4, strokeWidth: 2 }}
-                  activeDot={{ r: 6 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+              <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                <LineChart
+                  data={chartData}
+                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                >
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    vertical={false}
+                    stroke="var(--color-border)"
+                  />
+                  <XAxis
+                    dataKey="month"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 12, fill: "var(--color-muted-fg)" }}
+                    dy={10}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 12, fill: "var(--color-muted-fg)" }}
+                    tickFormatter={(val) => `${val / 1000}k`}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      borderRadius: "8px",
+                      border: "1px solid var(--color-border)",
+                      backgroundColor: "var(--color-card-bg)",
+                      color: "var(--color-ink)",
+                      boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+                    }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="Actual"
+                    stroke="var(--color-success)"
+                    strokeWidth={3}
+                    dot={{ r: 4, strokeWidth: 2 }}
+                    activeDot={{ r: 6 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
             )}
           </CardContent>
         </Card>
@@ -366,3 +465,4 @@ export function DashboardPage() {
     </div>
   );
 }
+
