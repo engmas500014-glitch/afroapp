@@ -116,14 +116,16 @@ export const loadDataFromSupabase = async () => {
   const mappedSalaryOverrides: Record<string, SalaryRecord> = {};
   (salaryOverrides || []).forEach(r => {
     mappedSalaryOverrides[r.id] = {
-      ot: r.ot,
-      bonus: r.bonus,
-      gift: r.gift,
-      retro: r.retro,
-      mobile: r.mobile,
-      topHero: r.top_hero,
-      poNumbers: r.po_numbers,
-      poAmountRequests: r.po_amount_requests,
+      ot: r.ot ?? 0,
+      bonus: r.bonus ?? 0,
+      laptop: r.bonus ?? 0,
+      otherCostNet: r.ot ?? 0,
+      gift: r.gift ?? 0,
+      retro: r.retro ?? 0,
+      mobile: r.mobile ?? 0,
+      topHero: r.top_hero ?? 0,
+      poNumbers: r.po_numbers || undefined,
+      poAmountRequests: r.po_amount_requests || undefined,
     };
   });
 
@@ -183,32 +185,52 @@ export const loadDataFromSupabase = async () => {
 };
 
 export const syncEmployees = async (data: Employee[]) => {
-  if (!data.length) return;
-  const mapped = data.map(e => ({
-    id: e.id,
-    hr_code: e.hrCode,
-    name: e.name,
-    position: e.position,
-    account: e.account || null,
-    project: e.project || null,
-    email: e.email || null,
-    phone1: e.phone1 || null,
-    phone2: e.phone2 || null,
-    date_hiring: e.dateHiring || null,
-    date_resign: e.dateResign || null,
-    status: e.status,
-    net_salary: e.netSalary || 0,
-    social_insurance_employee: e.socialInsuranceEmployee || null,
-    social_insurance_company: e.socialInsuranceCompany || null,
-    taxes: e.taxes || null,
-    medical: e.medical || null,
-    bank_account: e.bankAccount || null,
-    notes: e.notes || null,
-  }));
-  const { error } = await supabase.from('employees').upsert(mapped);
-  if (error) {
-    console.warn("Error syncing employees:", error);
-    throw new Error(`Error syncing employees: ${error.message}`);
+  const ids = data.map(e => e.id);
+  if (ids.length > 0) {
+    const { error: deleteError } = await supabase
+      .from('employees')
+      .delete()
+      .not('id', 'in', `(${ids.join(',')})`);
+    if (deleteError) {
+      console.warn("Error deleting removed employees:", deleteError);
+    }
+  } else {
+    const { error: deleteError } = await supabase
+      .from('employees')
+      .delete()
+      .neq('id', '_dummy_id_');
+    if (deleteError) {
+      console.warn("Error clearing employees:", deleteError);
+    }
+  }
+
+  if (data.length > 0) {
+    const mapped = data.map(e => ({
+      id: e.id,
+      hr_code: e.hrCode,
+      name: e.name,
+      position: e.position,
+      account: e.account || null,
+      project: e.project || null,
+      email: e.email || null,
+      phone1: e.phone1 || null,
+      phone2: e.phone2 || null,
+      date_hiring: e.dateHiring || null,
+      date_resign: e.dateResign || null,
+      status: e.status,
+      net_salary: e.netSalary || 0,
+      social_insurance_employee: e.socialInsuranceEmployee || null,
+      social_insurance_company: e.socialInsuranceCompany || null,
+      taxes: e.taxes || null,
+      medical: e.medical || null,
+      bank_account: e.bankAccount || null,
+      notes: e.notes || null,
+    }));
+    const { error } = await supabase.from('employees').upsert(mapped);
+    if (error) {
+      console.warn("Error syncing employees:", error);
+      throw new Error(`Error syncing employees: ${error.message}`);
+    }
   }
 };
 
@@ -247,43 +269,81 @@ export const syncSafetyRecords = async (data: Record<string, SafetyRecord>) => {
 };
 
 export const syncAccounts = async (data: AccountItem[]) => {
-  if (!data.length) return;
-  const { error } = await supabase.from('accounts').upsert(data);
-  if (error) console.warn("Error syncing accounts:", error);
+  const ids = data.map(x => x.id);
+  if (ids.length > 0) {
+    const { error: deleteError } = await supabase
+      .from('accounts')
+      .delete()
+      .not('id', 'in', `(${ids.join(',')})`);
+    if (deleteError) console.warn("Error deleting removed accounts:", deleteError);
+  } else {
+    const { error: deleteError } = await supabase
+      .from('accounts')
+      .delete()
+      .neq('id', '_dummy_id_');
+    if (deleteError) console.warn("Error clearing accounts:", deleteError);
+  }
+
+  if (data.length > 0) {
+    const { error } = await supabase.from('accounts').upsert(data);
+    if (error) {
+      console.warn("Error syncing accounts:", error);
+      throw new Error(`Error syncing accounts: ${error.message}`);
+    }
+  }
 };
 
 export const syncPoBudgets = async (data: POBudget[]) => {
-  if (!data.length) return;
-  const mapped = data.map(b => ({
-    id: b.id,
-    account: b.account,
-    project: b.project,
-    month: b.month,
-    year: b.year,
-    po_amount: b.poAmount || 0,
-    no_of_staff: b.noOfStaff || 0,
-    po_salaries: b.poSalaries || 0,
-    po_ot: b.poOT || 0,
-    po_retro: b.poRetro || 0,
-    po_gifts: b.poGifts || 0,
-    po_top_hero: b.poTopHero || 0,
-    po_breakfast: b.poBreakfast || 0,
-    po_annual: b.poAnnual || 0,
-    po_mobile: b.poMobile || 0,
-    po_medical: b.poMedical || 0,
-    po_laptop: b.poLaptop || 0,
-    po_net_profit: b.poNetProfit || 0,
-    actual_breakfast: b.actualBreakfast || 0,
-    actual_annual: b.actualAnnual || 0,
-    actual_medical: b.actualMedical || 0,
-    actual_laptop: b.actualLaptop || 0,
-    actual_net_profit: b.actualNetProfit || 0,
-    actual_top_hero: b.actualTopHero || 0,
-    custom_allocations: b.customAllocations || null,
-    custom_actual_allocations: b.customActualAllocations || null,
-  }));
-  const { error } = await supabase.from('po_budgets').upsert(mapped);
-  if (error) console.warn("Error syncing po_budgets:", error);
+  const ids = data.map(b => b.id);
+  if (ids.length > 0) {
+    const { error: deleteError } = await supabase
+      .from('po_budgets')
+      .delete()
+      .not('id', 'in', `(${ids.join(',')})`);
+    if (deleteError) console.warn("Error deleting removed po_budgets:", deleteError);
+  } else {
+    const { error: deleteError } = await supabase
+      .from('po_budgets')
+      .delete()
+      .neq('id', '_dummy_id_');
+    if (deleteError) console.warn("Error clearing po_budgets:", deleteError);
+  }
+
+  if (data.length > 0) {
+    const mapped = data.map(b => ({
+      id: b.id,
+      account: b.account,
+      project: b.project,
+      month: b.month,
+      year: b.year,
+      po_amount: b.poAmount || 0,
+      no_of_staff: b.noOfStaff || 0,
+      po_salaries: b.poSalaries || 0,
+      po_ot: b.poOT || 0,
+      po_retro: b.poRetro || 0,
+      po_gifts: b.poGifts || 0,
+      po_top_hero: b.poTopHero || 0,
+      po_breakfast: b.poBreakfast || 0,
+      po_annual: b.poAnnual || 0,
+      po_mobile: b.poMobile || 0,
+      po_medical: b.poMedical || 0,
+      po_laptop: b.poLaptop || 0,
+      po_net_profit: b.poNetProfit || 0,
+      actual_breakfast: b.actualBreakfast || 0,
+      actual_annual: b.actualAnnual || 0,
+      actual_medical: b.actualMedical || 0,
+      actual_laptop: b.actualLaptop || 0,
+      actual_net_profit: b.actualNetProfit || 0,
+      actual_top_hero: b.actualTopHero || 0,
+      custom_allocations: b.customAllocations || null,
+      custom_actual_allocations: b.customActualAllocations || null,
+    }));
+    const { error } = await supabase.from('po_budgets').upsert(mapped);
+    if (error) {
+      console.warn("Error syncing po_budgets:", error);
+      throw new Error(`Error syncing po_budgets: ${error.message}`);
+    }
+  }
 };
 
 export const syncSalaryOverrides = async (data: Record<string, SalaryRecord>) => {
@@ -293,8 +353,8 @@ export const syncSalaryOverrides = async (data: Record<string, SalaryRecord>) =>
     const r = data[k];
     return {
       id: k,
-      ot: r.ot || 0,
-      bonus: r.bonus || 0,
+      ot: r.otherCostNet !== undefined ? r.otherCostNet : (r.ot || 0),
+      bonus: r.laptop !== undefined ? r.laptop : (r.bonus || 0),
       gift: r.gift || 0,
       retro: r.retro || 0,
       mobile: r.mobile || 0,
@@ -308,20 +368,39 @@ export const syncSalaryOverrides = async (data: Record<string, SalaryRecord>) =>
 };
 
 export const syncEscalations = async (data: Escalation[]) => {
-  if (!data.length) return;
-  const mapped = data.map(e => ({
-    id: e.id,
-    employee_id: e.employeeId,
-    employee_name: e.employeeName,
-    manager_name: e.managerName,
-    subject: e.subject,
-    description: e.description,
-    date: e.date,
-    status: e.status,
-    replies: e.replies || [],
-  }));
-  const { error } = await supabase.from('escalations').upsert(mapped);
-  if (error) console.warn("Error syncing escalations:", error);
+  const ids = data.map(e => e.id);
+  if (ids.length > 0) {
+    const { error: deleteError } = await supabase
+      .from('escalations')
+      .delete()
+      .not('id', 'in', `(${ids.join(',')})`);
+    if (deleteError) console.warn("Error deleting removed escalations:", deleteError);
+  } else {
+    const { error: deleteError } = await supabase
+      .from('escalations')
+      .delete()
+      .neq('id', '_dummy_id_');
+    if (deleteError) console.warn("Error clearing escalations:", deleteError);
+  }
+
+  if (data.length > 0) {
+    const mapped = data.map(e => ({
+      id: e.id,
+      employee_id: e.employeeId,
+      employee_name: e.employeeName,
+      manager_name: e.managerName,
+      subject: e.subject,
+      description: e.description,
+      date: e.date,
+      status: e.status,
+      replies: e.replies || [],
+    }));
+    const { error } = await supabase.from('escalations').upsert(mapped);
+    if (error) {
+      console.warn("Error syncing escalations:", error);
+      throw new Error(`Error syncing escalations: ${error.message}`);
+    }
+  }
 };
 
 export const syncPermissions = async (data: PermissionNode[]) => {
@@ -331,25 +410,44 @@ export const syncPermissions = async (data: PermissionNode[]) => {
 };
 
 export const syncPoAcceptances = async (data: POAcceptance[]) => {
-  if (!data.length) return;
-  const mapped = data.map(a => ({
-    id: a.id,
-    month: a.month,
-    year: a.year,
-    po_number: a.poNumber,
-    amount_po: a.amountPo || 0,
-    po_amount_request: a.poAmountRequest || null,
-    cost_po: a.costPo || 0,
-    balance_po: a.balancePo || 0,
-    grn_number: a.grnNumber,
-    grn_date: a.grnDate,
-    invoice_no: a.invoiceNo,
-    invoice_date: a.invoiceDate,
-    collect_date: a.collectDate,
-    collect_state: a.collectState || null,
-  }));
-  const { error } = await supabase.from('po_acceptances').upsert(mapped);
-  if (error) console.warn("Error syncing po_acceptances:", error);
+  const ids = data.map(a => a.id);
+  if (ids.length > 0) {
+    const { error: deleteError } = await supabase
+      .from('po_acceptances')
+      .delete()
+      .not('id', 'in', `(${ids.join(',')})`);
+    if (deleteError) console.warn("Error deleting removed po_acceptances:", deleteError);
+  } else {
+    const { error: deleteError } = await supabase
+      .from('po_acceptances')
+      .delete()
+      .neq('id', '_dummy_id_');
+    if (deleteError) console.warn("Error clearing po_acceptances:", deleteError);
+  }
+
+  if (data.length > 0) {
+    const mapped = data.map(a => ({
+      id: a.id,
+      month: a.month,
+      year: a.year,
+      po_number: a.poNumber,
+      amount_po: a.amountPo || 0,
+      po_amount_request: a.poAmountRequest || null,
+      cost_po: a.costPo || 0,
+      balance_po: a.balancePo || 0,
+      grn_number: a.grnNumber,
+      grn_date: a.grnDate,
+      invoice_no: a.invoiceNo,
+      invoice_date: a.invoiceDate,
+      collect_date: a.collectDate,
+      collect_state: a.collectState || null,
+    }));
+    const { error } = await supabase.from('po_acceptances').upsert(mapped);
+    if (error) {
+      console.warn("Error syncing po_acceptances:", error);
+      throw new Error(`Error syncing po_acceptances: ${error.message}`);
+    }
+  }
 };
 
 export const syncFinConfig = async (data: Record<string, ProjectConfig>) => {
@@ -372,7 +470,26 @@ export const syncFinConfig = async (data: Record<string, ProjectConfig>) => {
 };
 
 export const syncUsers = async (data: User[]) => {
-  if (!data.length) return;
-  const { error } = await supabase.from('users').upsert(data);
-  if (error) console.warn("Error syncing users:", error);
+  const ids = data.map(u => u.id);
+  if (ids.length > 0) {
+    const { error: deleteError } = await supabase
+      .from('users')
+      .delete()
+      .not('id', 'in', `(${ids.join(',')})`);
+    if (deleteError) console.warn("Error deleting removed users:", deleteError);
+  } else {
+    const { error: deleteError } = await supabase
+      .from('users')
+      .delete()
+      .neq('id', '_dummy_id_');
+    if (deleteError) console.warn("Error clearing users:", deleteError);
+  }
+
+  if (data.length > 0) {
+    const { error } = await supabase.from('users').upsert(data);
+    if (error) {
+      console.warn("Error syncing users:", error);
+      throw new Error(`Error syncing users: ${error.message}`);
+    }
+  }
 };

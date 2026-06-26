@@ -1,17 +1,44 @@
 import React from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, Calculator, FileSpreadsheet, LogOut, Menu, Shield, Settings, Sun, Moon, X, MessageSquareWarning, Banknote, HardHat } from 'lucide-react';
+import { LayoutDashboard, Users, Calculator, FileSpreadsheet, LogOut, Menu, Shield, Settings, Sun, Moon, X, MessageSquareWarning, Banknote, HardHat, RefreshCw, CheckCircle2, AlertCircle, WifiOff } from 'lucide-react';
 import { useAppContext } from '../store/AppContext';
 import { cn } from '../lib/utils';
 import { Button, Input } from './ui';
+import { AfroLogo } from './AfroLogo';
 
 export function Layout() {
-  const { user, setUser, theme, toggleTheme, permissions, systemUsers, setSystemUsers, isSupabaseConnected } = useAppContext();
+  const { 
+    user, 
+    setUser, 
+    theme, 
+    toggleTheme, 
+    permissions, 
+    systemUsers, 
+    setSystemUsers, 
+    isSupabaseConnected,
+    syncState,
+    syncError,
+    triggerManualSync 
+  } = useAppContext();
   const navigate = useNavigate();
   const [isSidebarOpen, setSidebarOpen] = React.useState(true);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = React.useState(false);
   const [newPassword, setNewPassword] = React.useState('');
   const [successMsg, setSuccessMsg] = React.useState('');
+  const [isSyncingManual, setIsSyncingManual] = React.useState(false);
+  const [localSyncErr, setLocalSyncErr] = React.useState<string | null>(null);
+
+  const handleManualSyncClick = async () => {
+    setIsSyncingManual(true);
+    setLocalSyncErr(null);
+    try {
+      await triggerManualSync();
+    } catch (err: any) {
+      setLocalSyncErr(err.message || String(err));
+    } finally {
+      setIsSyncingManual(false);
+    }
+  };
 
   const handleLogout = () => {
     setUser(null);
@@ -33,6 +60,8 @@ export function Layout() {
         return hasPermission('Employees', 'View Employee List');
       case '/salaries':
         return hasPermission('Salaries', 'View Monthly Salaries');
+      case '/other-cost':
+        return hasPermission('Other Cost', 'View Other Cost') || user?.role === 'Admin' || user?.role === 'HR';
       case '/gross-salaries':
         return hasPermission('Gross Salaries', 'View Gross Salaries');
       case '/cost':
@@ -60,6 +89,7 @@ export function Layout() {
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
     { name: 'Employees', path: '/employees', icon: Users },
     { name: 'Monthly Salaries', path: '/salaries', icon: Calculator },
+    { name: 'Other Cost', path: '/other-cost', icon: Calculator },
     { name: 'Gross Salaries', path: '/gross-salaries', icon: Banknote },
     { name: 'Total Cost', path: '/cost', icon: Calculator },
     { name: 'Safety', path: '/safety', icon: HardHat },
@@ -91,14 +121,10 @@ export function Layout() {
         !isSidebarOpen && "-ml-[240px]"
       )}>
         <div className="text-[1.3rem] font-[800] pb-4 flex items-center justify-center gap-2 text-ink border-b border-border">
-          <img src="/logo.png" alt="AFRO APP Logo" className="h-8 object-contain" onError={(e) => {
-            (e.target as HTMLImageElement).style.display = 'none';
-            const nextSibling = (e.target as HTMLImageElement).nextElementSibling as HTMLElement;
-            if (nextSibling) nextSibling.style.display = 'flex';
-          }} />
-          <div style={{ display: 'none' }} className="items-center justify-center gap-2">
-            <span style={{ color: '#fcc115' }}>AFRO</span><span className="text-accent opacity-90">APP</span>
-          </div>
+          <AfroLogo size="md" />
+          <span className="text-accent text-[0.85rem] font-black uppercase tracking-widest bg-accent/10 px-2 py-0.5 rounded-md dark:bg-accent/20">
+            APP
+          </span>
         </div>
         
         <nav className="flex-1 overflow-y-auto mt-6 flex flex-col px-2 space-y-1 no-scrollbar">
@@ -167,8 +193,55 @@ export function Layout() {
             <Button variant="ghost" onClick={() => setSidebarOpen(!isSidebarOpen)} className="p-2 h-auto text-muted-fg hover:bg-muted/50">
                <Menu className="w-5 h-5 text-ink" />
             </Button>
+            {!isSidebarOpen && (
+              <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-300">
+                <AfroLogo size="sm" />
+                <span className="text-accent text-[0.75rem] font-black uppercase tracking-widest bg-accent/10 px-1.5 py-0.5 rounded">
+                  APP
+                </span>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-4">
+            {/* Database Sync Indicator */}
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm border border-border bg-card-bg">
+              {syncState === 'syncing' || isSyncingManual ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 text-amber-500 animate-spin" />
+                  <span className="text-amber-500">Syncing...</span>
+                </>
+              ) : syncState === 'synced' ? (
+                <>
+                  <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+                  <span className="text-green-500">Database Synced</span>
+                </>
+              ) : syncState === 'error' ? (
+                <>
+                  <AlertCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                  <span className="text-red-500 cursor-help" title={syncError || localSyncErr || 'Synchronization issue detected'}>Sync Failed</span>
+                  <button 
+                    onClick={handleManualSyncClick}
+                    className="ml-1 text-[10px] text-accent hover:underline focus:outline-none cursor-pointer"
+                    disabled={isSyncingManual}
+                  >
+                    Retry
+                  </button>
+                </>
+              ) : (
+                <>
+                  <WifiOff className="w-3.5 h-3.5 text-muted-fg" />
+                  <span className="text-muted-fg">Offline Mode</span>
+                  <button 
+                    onClick={handleManualSyncClick}
+                    className="ml-1 text-[10px] text-accent hover:underline focus:outline-none cursor-pointer"
+                    disabled={isSyncingManual}
+                  >
+                    Connect
+                  </button>
+                </>
+              )}
+            </div>
+
             <span className="text-[0.85rem] font-medium text-muted-fg">System Date: {new Date().toLocaleDateString()}</span>
             <Button variant="ghost" className="p-2 h-auto rounded-full hover:bg-muted/50" onClick={toggleTheme}>
               {theme === 'dark' ? <Moon className="w-5 h-5 text-ink" /> : <Sun className="w-5 h-5 text-ink" />}

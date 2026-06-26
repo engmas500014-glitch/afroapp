@@ -424,6 +424,66 @@ export function POAcceptancesPage() {
   
   const runningDispReqSum: Record<string, number> = {};
 
+  const calculateProratedSalaryForMonthYear = (emp: any, m: string, y: number) => {
+    const monthIndex = months.indexOf(m);
+    const startOfSelectedMonth = new Date(y, monthIndex, 1);
+    const endOfSelectedMonth = new Date(y, monthIndex + 1, 0, 23, 59, 59);
+    const totalDaysInMonth = new Date(y, monthIndex + 1, 0).getDate();
+
+    let hiringDateLocal = new Date(0);
+    if (emp.dateHiring) {
+      const parts = emp.dateHiring.split("-");
+      if (parts.length === 3) {
+        hiringDateLocal = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+      } else {
+        hiringDateLocal = new Date(emp.dateHiring);
+      }
+    } else {
+      return 0;
+    }
+
+    let resignDateLocal: Date | null = null;
+    if (emp.dateResign) {
+      const parts = emp.dateResign.split("-");
+      if (parts.length === 3) {
+        resignDateLocal = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+      } else {
+        resignDateLocal = new Date(emp.dateResign);
+      }
+    }
+
+    const actualStart =
+      hiringDateLocal > startOfSelectedMonth
+        ? hiringDateLocal
+        : startOfSelectedMonth;
+    const actualEnd =
+      resignDateLocal && resignDateLocal < endOfSelectedMonth
+        ? resignDateLocal
+        : endOfSelectedMonth;
+
+    if (actualStart > actualEnd) return 0;
+
+    const utcStart = Date.UTC(
+      actualStart.getFullYear(),
+      actualStart.getMonth(),
+      actualStart.getDate(),
+    );
+    const utcEnd = Date.UTC(
+      actualEnd.getFullYear(),
+      actualEnd.getMonth(),
+      actualEnd.getDate(),
+    );
+
+    const daysWorked =
+      Math.floor((utcEnd - utcStart) / (1000 * 60 * 60 * 24)) + 1;
+
+    if (daysWorked >= totalDaysInMonth) {
+      return emp.netSalary || 0;
+    }
+
+    return Math.round(((emp.netSalary || 0) / totalDaysInMonth) * daysWorked);
+  };
+
   years.forEach((y) => {
     months.forEach((m) => {
       const isSelectedMonth = m === selectedMonth && y === selectedYear;
@@ -470,7 +530,7 @@ export function POAcceptancesPage() {
         const overrideKey = `${emp.id}_${m}_${y}`;
         const overrides = salaryOverrides[overrideKey] || { poNumbers: [] };
 
-        const netSalary = emp.netSalary || 0;
+        const netSalary = calculateProratedSalaryForMonthYear(emp, m, y);
         const siEmp = emp.socialInsuranceEmployee || 0;
         const siComp = emp.socialInsuranceCompany || 0;
         const taxes = emp.taxes || 0;

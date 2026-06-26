@@ -175,6 +175,8 @@ export interface SalaryRecord {
   retro: number;
   mobile: number;
   topHero: number;
+  laptop?: number;
+  otherCostNet?: number;
   poNumbers?: string[];
   poAmountRequests?: string[];
 }
@@ -224,6 +226,207 @@ export interface POAcceptance {
 
 export type Theme = "light" | "dark";
 
+export const DEFAULT_PERMS: PermissionNode[] = [
+  {
+    id: "p1",
+    module: "Dashboard",
+    action: "View Metrics & Charts",
+    roles: { Admin: true, HR: true, Manager: true, Employee: true, Acceptances: false, PM: false, CM: false },
+  },
+  {
+    id: "p2",
+    module: "Employees",
+    action: "View Employee List",
+    roles: { Admin: true, HR: true, Manager: true, Employee: false, Acceptances: false, PM: false, CM: false },
+  },
+  {
+    id: "p3",
+    module: "Employees",
+    action: "Add / Edit / Delete Employees",
+    roles: { Admin: true, HR: true, Manager: false, Employee: false, Acceptances: false, PM: false, CM: false },
+  },
+  {
+    id: "p_emp_import",
+    module: "Employees",
+    action: "Import Employees",
+    roles: { Admin: true, HR: true, Manager: false, Employee: false, Acceptances: false, PM: false, CM: false },
+  },
+  {
+    id: "p_emp_export",
+    module: "Employees",
+    action: "Export Employees",
+    roles: { Admin: true, HR: true, Manager: false, Employee: false, Acceptances: false, PM: false, CM: false },
+  },
+  {
+    id: "p4",
+    module: "Salaries",
+    action: "View Monthly Salaries",
+    roles: { Admin: true, HR: true, Manager: false, Employee: true, Acceptances: false, PM: false, CM: false },
+  },
+  {
+    id: "p5",
+    module: "Salaries",
+    action: "Modify Salary & Bonus",
+    roles: { Admin: true, HR: false, Manager: false, Employee: false, Acceptances: false, PM: false, CM: false },
+  },
+  {
+    id: "p5b",
+    module: "Salaries",
+    action: "Send Payslips",
+    roles: { Admin: true, HR: true, Manager: false, Employee: false, Acceptances: false, PM: false, CM: false },
+  },
+  {
+    id: "p_sal_export",
+    module: "Salaries",
+    action: "Export Salaries",
+    roles: { Admin: true, HR: true, Manager: true, Employee: false, Acceptances: false, PM: false, CM: false },
+  },
+  {
+    id: "p_other_cost_view",
+    module: "Other Cost",
+    action: "View Other Cost",
+    roles: { Admin: true, HR: true, Manager: false, Employee: true, Acceptances: false, PM: false, CM: false },
+  },
+  {
+    id: "p_other_cost_manage",
+    module: "Other Cost",
+    action: "Modify Other Cost",
+    roles: { Admin: true, HR: false, Manager: false, Employee: false, Acceptances: false, PM: false, CM: false },
+  },
+  {
+    id: "p_other_cost_payslips",
+    module: "Other Cost",
+    action: "Send Cost Slips",
+    roles: { Admin: true, HR: true, Manager: false, Employee: false, Acceptances: false, PM: false, CM: false },
+  },
+  {
+    id: "p_other_cost_export",
+    module: "Other Cost",
+    action: "Export Other Cost",
+    roles: { Admin: true, HR: true, Manager: true, Employee: false, Acceptances: false, PM: false, CM: false },
+  },
+  {
+    id: "p12",
+    module: "Gross Salaries",
+    action: "View Gross Salaries",
+    roles: { Admin: true, HR: true, Manager: false, Employee: false, Acceptances: false, PM: false, CM: false },
+  },
+  {
+    id: "p_gsal_export",
+    module: "Gross Salaries",
+    action: "Export Gross Salaries",
+    roles: { Admin: true, HR: true, Manager: true, Employee: false, Acceptances: false, PM: false, CM: false },
+  },
+  {
+    id: "p_cost_view",
+    module: "Cost",
+    action: "View Cost Page",
+    roles: { Admin: true, HR: true, Manager: true, Employee: false, Acceptances: false, PM: false, CM: false },
+  },
+  {
+    id: "p_cost_manage",
+    module: "Cost",
+    action: "Manage Cost Data",
+    roles: { Admin: true, HR: true, Manager: false, Employee: false, Acceptances: false, PM: false, CM: false },
+  },
+  {
+    id: "p_cost_export",
+    module: "Cost",
+    action: "Export Cost Page",
+    roles: { Admin: true, HR: true, Manager: true, Employee: false, Acceptances: false, PM: false, CM: false },
+  },
+  {
+    id: "p_saf_view",
+    module: "Safety",
+    action: "View Safety Page",
+    roles: { Admin: true, HR: true, Manager: true, Employee: false, Acceptances: false, PM: false, CM: false },
+  },
+  {
+    id: "p13",
+    module: "Safety",
+    action: "Manage Safety",
+    roles: { Admin: true, HR: true, Manager: true, Employee: false, Acceptances: false, PM: false, CM: false },
+  },
+  {
+    id: "p_saf_export",
+    module: "Safety",
+    action: "Export Safety",
+    roles: { Admin: true, HR: true, Manager: true, Employee: false, Acceptances: false, PM: false, CM: false },
+  },
+  {
+    id: "p6",
+    module: "PO & Budget",
+    action: "View Financial Dashboard",
+    roles: { Admin: true, HR: true, Manager: true, Employee: false, Acceptances: false, PM: false, CM: false },
+  },
+  {
+    id: "p7",
+    module: "PO & Budget",
+    action: "Edit Budget Rows",
+    roles: { Admin: true, HR: true, Manager: false, Employee: false, Acceptances: false, PM: false, CM: false },
+  },
+  {
+    id: "p_pob_export",
+    module: "PO & Budget",
+    action: "Export Budget Rows",
+    roles: { Admin: true, HR: true, Manager: true, Employee: false, Acceptances: false, PM: false, CM: false },
+  },
+  {
+    id: "p_poa_view",
+    module: "PO Acceptances",
+    action: "View PO Acceptances",
+    roles: { Admin: true, HR: true, Manager: true, Employee: false, Acceptances: false, PM: false, CM: false },
+  },
+  {
+    id: "p_poa_manage",
+    module: "PO Acceptances",
+    action: "Manage PO Acceptances",
+    roles: { Admin: true, HR: true, Manager: false, Employee: false, Acceptances: false, PM: false, CM: false },
+  },
+  {
+    id: "p_poa_export",
+    module: "PO Acceptances",
+    action: "Export PO Acceptances",
+    roles: { Admin: true, HR: true, Manager: true, Employee: false, Acceptances: false, PM: false, CM: false },
+  },
+  {
+    id: "p_poe_view",
+    module: "PO Entry",
+    action: "View PO Entry",
+    roles: { Admin: true, HR: true, Manager: true, Employee: false, Acceptances: false, PM: false, CM: false },
+  },
+  {
+    id: "p_poe_manage",
+    module: "PO Entry",
+    action: "Edit PO Entry",
+    roles: { Admin: true, HR: true, Manager: false, Employee: false, Acceptances: false, PM: false, CM: false },
+  },
+  {
+    id: "p10",
+    module: "Escalations",
+    action: "View & Manage Escalations",
+    roles: { Admin: true, HR: true, Manager: true, Employee: true, Acceptances: false, PM: false, CM: false },
+  },
+  {
+    id: "p11",
+    module: "Escalations",
+    action: "Edit / Delete Escalations",
+    roles: { Admin: true, HR: true, Manager: false, Employee: false, Acceptances: false, PM: false, CM: false },
+  },
+  {
+    id: "p9",
+    module: "System",
+    action: "Manage Roles & Permissions",
+    roles: { Admin: true, HR: false, Manager: false, Employee: false, Acceptances: false, PM: false, CM: false },
+  },
+  {
+    id: "p_sys_settings",
+    module: "System",
+    action: "Manage Settings",
+    roles: { Admin: true, HR: false, Manager: false, Employee: false, Acceptances: false, PM: false, CM: false },
+  },
+];
+
 interface AppContextType {
   isSupabaseConnected: boolean;
   user: User | null;
@@ -261,6 +464,9 @@ interface AppContextType {
   setPermissions: React.Dispatch<React.SetStateAction<PermissionNode[]>>;
   theme: Theme;
   toggleTheme: () => void;
+  syncState: 'synced' | 'syncing' | 'error' | 'offline';
+  syncError: string | null;
+  triggerManualSync: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -268,7 +474,23 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export function AppProvider({ children }: { children: ReactNode }) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isSupabaseConnected, setIsSupabaseConnected] = useState(false);
+  const [syncState, setSyncState] = useState<'synced' | 'syncing' | 'error' | 'offline'>('offline');
+  const [syncError, setSyncError] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
+
+  const handleSyncCall = async (syncName: string, syncFn: () => Promise<void>) => {
+    if (!isLoaded || !isSupabaseConnected) return;
+    setSyncState('syncing');
+    try {
+      await syncFn();
+      setSyncState('synced');
+      setSyncError(null);
+    } catch (err: any) {
+      console.error(`Sync error in ${syncName}:`, err);
+      setSyncState('error');
+      setSyncError(`${syncName} synchronization failed: ${err.message || err}`);
+    }
+  };
 
   const [theme, setTheme] = useState<Theme>(() => {
     const saved = localStorage.getItem("theme");
@@ -337,7 +559,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   React.useEffect(() => {
     localStorage.setItem("finConfig", JSON.stringify(finConfig));
-    if (isLoaded && isSupabaseConnected) syncFinConfig(finConfig).catch(console.warn);
+    if (isLoaded && isSupabaseConnected) {
+      handleSyncCall("Financial Config", () => syncFinConfig(finConfig));
+    }
   }, [finConfig, isLoaded, isSupabaseConnected]);
 
   // Mock Data
@@ -488,22 +712,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   React.useEffect(() => {
     localStorage.setItem("employees", JSON.stringify(employees));
-    if (isLoaded && isSupabaseConnected) syncEmployees(employees).catch(console.warn);
+    if (isLoaded && isSupabaseConnected) {
+      handleSyncCall("Employees", () => syncEmployees(employees));
+    }
   }, [employees, isLoaded, isSupabaseConnected]);
 
   React.useEffect(() => {
     localStorage.setItem("poAcceptances", JSON.stringify(poAcceptances));
-    if (isLoaded && isSupabaseConnected) syncPoAcceptances(poAcceptances).catch(console.warn);
+    if (isLoaded && isSupabaseConnected) {
+      handleSyncCall("PO Acceptances", () => syncPoAcceptances(poAcceptances));
+    }
   }, [poAcceptances, isLoaded, isSupabaseConnected]);
 
   React.useEffect(() => {
     localStorage.setItem("poBudgets", JSON.stringify(poBudgets));
-    if (isLoaded && isSupabaseConnected) syncPoBudgets(poBudgets).catch(console.warn);
+    if (isLoaded && isSupabaseConnected) {
+      handleSyncCall("PO Budgets", () => syncPoBudgets(poBudgets));
+    }
   }, [poBudgets, isLoaded, isSupabaseConnected]);
 
   React.useEffect(() => {
     localStorage.setItem("salaryOverrides", JSON.stringify(salaryOverrides));
-    if (isLoaded && isSupabaseConnected) syncSalaryOverrides(salaryOverrides).catch(console.warn);
+    if (isLoaded && isSupabaseConnected) {
+      handleSyncCall("Salary Overrides", () => syncSalaryOverrides(salaryOverrides));
+    }
   }, [salaryOverrides, isLoaded, isSupabaseConnected]);
   
   const [safetyRecords, setSafetyRecords] = useState<Record<string, SafetyRecord>>(() => {
@@ -520,7 +752,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   React.useEffect(() => {
     localStorage.setItem("safetyRecords", JSON.stringify(safetyRecords));
-    if (isLoaded && isSupabaseConnected) syncSafetyRecords(safetyRecords).catch(console.warn);
+    if (isLoaded && isSupabaseConnected) {
+      handleSyncCall("Safety Records", () => syncSafetyRecords(safetyRecords));
+    }
   }, [safetyRecords, isLoaded, isSupabaseConnected]);
 
   const [positions, setPositions] = useState<string[]>([
@@ -542,7 +776,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   ]);
   
   React.useEffect(() => {
-    if (isLoaded && isSupabaseConnected) syncAccounts(accounts).catch(console.warn);
+    if (isLoaded && isSupabaseConnected) {
+      handleSyncCall("Accounts", () => syncAccounts(accounts));
+    }
   }, [accounts, isLoaded, isSupabaseConnected]);
 
   const [projects, setProjects] = useState<string[]>([]);
@@ -588,7 +824,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   React.useEffect(() => {
     localStorage.setItem("systemUsers", JSON.stringify(systemUsers));
-    if (isLoaded && isSupabaseConnected) syncUsers(systemUsers).catch(console.warn);
+    if (isLoaded && isSupabaseConnected) {
+      handleSyncCall("Users", () => syncUsers(systemUsers));
+    }
   }, [systemUsers, isLoaded, isSupabaseConnected]);
 
   const [escalations, setEscalations] = useState<Escalation[]>(() => {
@@ -616,206 +854,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   React.useEffect(() => {
     localStorage.setItem("escalations", JSON.stringify(escalations));
-    if (isLoaded && isSupabaseConnected) syncEscalations(escalations).catch(console.warn);
+    if (isLoaded && isSupabaseConnected) {
+      handleSyncCall("Escalations", () => syncEscalations(escalations));
+    }
   }, [escalations, isLoaded, isSupabaseConnected]);
 
   const [permissions, setPermissions] = useState<PermissionNode[]>(() => {
-    const defaultPerms: PermissionNode[] = [
-      {
-        id: "p1",
-        module: "Dashboard",
-        action: "View Metrics & Charts",
-        roles: { Admin: true, HR: true, Manager: true, Employee: true, Acceptances: false, PM: false, CM: false },
-      },
-      {
-        id: "p2",
-        module: "Employees",
-        action: "View Employee List",
-        roles: { Admin: true, HR: true, Manager: true, Employee: false, Acceptances: false, PM: false, CM: false },
-      },
-      {
-        id: "p3",
-        module: "Employees",
-        action: "Add / Edit / Delete Employees",
-        roles: { Admin: true, HR: true, Manager: false, Employee: false, Acceptances: false, PM: false, CM: false },
-      },
-      {
-        id: "p_emp_import",
-        module: "Employees",
-        action: "Import Employees",
-        roles: { Admin: true, HR: true, Manager: false, Employee: false, Acceptances: false, PM: false, CM: false },
-      },
-      {
-        id: "p_emp_export",
-        module: "Employees",
-        action: "Export Employees",
-        roles: { Admin: true, HR: true, Manager: false, Employee: false, Acceptances: false, PM: false, CM: false },
-      },
-      {
-        id: "p4",
-        module: "Salaries",
-        action: "View Monthly Salaries",
-        roles: { Admin: true, HR: true, Manager: false, Employee: true, Acceptances: false, PM: false, CM: false },
-      },
-      {
-        id: "p5",
-        module: "Salaries",
-        action: "Modify Salary & Bonus",
-        roles: { Admin: true, HR: false, Manager: false, Employee: false, Acceptances: false, PM: false, CM: false },
-      },
-      {
-        id: "p5b",
-        module: "Salaries",
-        action: "Send Payslips",
-        roles: { Admin: true, HR: true, Manager: false, Employee: false, Acceptances: false, PM: false, CM: false },
-      },
-      {
-        id: "p_sal_export",
-        module: "Salaries",
-        action: "Export Salaries",
-        roles: { Admin: true, HR: true, Manager: true, Employee: false, Acceptances: false, PM: false, CM: false },
-      },
-      {
-        id: "p12",
-        module: "Gross Salaries",
-        action: "View Gross Salaries",
-        roles: { Admin: true, HR: true, Manager: false, Employee: false, Acceptances: false, PM: false, CM: false },
-      },
-      {
-        id: "p_gsal_export",
-        module: "Gross Salaries",
-        action: "Export Gross Salaries",
-        roles: { Admin: true, HR: true, Manager: true, Employee: false, Acceptances: false, PM: false, CM: false },
-      },
-      {
-        id: "p_cost_view",
-        module: "Cost",
-        action: "View Cost Page",
-        roles: { Admin: true, HR: true, Manager: true, Employee: false, Acceptances: false, PM: false, CM: false },
-      },
-      {
-        id: "p_cost_manage",
-        module: "Cost",
-        action: "Manage Cost Data",
-        roles: { Admin: true, HR: true, Manager: false, Employee: false, Acceptances: false, PM: false, CM: false },
-      },
-      {
-        id: "p_cost_export",
-        module: "Cost",
-        action: "Export Cost Page",
-        roles: { Admin: true, HR: true, Manager: true, Employee: false, Acceptances: false, PM: false, CM: false },
-      },
-      {
-        id: "p_saf_view",
-        module: "Safety",
-        action: "View Safety Page",
-        roles: { Admin: true, HR: true, Manager: true, Employee: false, Acceptances: false, PM: false, CM: false },
-      },
-      {
-        id: "p13",
-        module: "Safety",
-        action: "Manage Safety",
-        roles: { Admin: true, HR: true, Manager: true, Employee: false, Acceptances: false, PM: false, CM: false },
-      },
-      {
-        id: "p_saf_export",
-        module: "Safety",
-        action: "Export Safety",
-        roles: { Admin: true, HR: true, Manager: true, Employee: false, Acceptances: false, PM: false, CM: false },
-      },
-      {
-        id: "p6",
-        module: "PO & Budget",
-        action: "View Financial Dashboard",
-        roles: { Admin: true, HR: true, Manager: true, Employee: false, Acceptances: false, PM: false, CM: false },
-      },
-      {
-        id: "p7",
-        module: "PO & Budget",
-        action: "Edit Budget Rows",
-        roles: { Admin: true, HR: true, Manager: false, Employee: false, Acceptances: false, PM: false, CM: false },
-      },
-      {
-        id: "p_pob_export",
-        module: "PO & Budget",
-        action: "Export Budget Rows",
-        roles: { Admin: true, HR: true, Manager: true, Employee: false, Acceptances: false, PM: false, CM: false },
-      },
-      {
-        id: "p_poa_view",
-        module: "PO Acceptances",
-        action: "View PO Acceptances",
-        roles: { Admin: true, HR: true, Manager: true, Employee: false, Acceptances: false, PM: false, CM: false },
-      },
-      {
-        id: "p_poa_manage",
-        module: "PO Acceptances",
-        action: "Manage PO Acceptances",
-        roles: { Admin: true, HR: true, Manager: false, Employee: false, Acceptances: false, PM: false, CM: false },
-      },
-      {
-        id: "p_poa_export",
-        module: "PO Acceptances",
-        action: "Export PO Acceptances",
-        roles: { Admin: true, HR: true, Manager: true, Employee: false, Acceptances: false, PM: false, CM: false },
-      },
-      {
-        id: "p_poe_view",
-        module: "PO Entry",
-        action: "View PO Entry",
-        roles: { Admin: true, HR: true, Manager: true, Employee: false, Acceptances: false, PM: false, CM: false },
-      },
-      {
-        id: "p_poe_manage",
-        module: "PO Entry",
-        action: "Edit PO Entry",
-        roles: { Admin: true, HR: true, Manager: false, Employee: false, Acceptances: false, PM: false, CM: false },
-      },
-      {
-        id: "p10",
-        module: "Escalations",
-        action: "View & Manage Escalations",
-        roles: { Admin: true, HR: true, Manager: true, Employee: true, Acceptances: false, PM: false, CM: false },
-      },
-      {
-        id: "p11",
-        module: "Escalations",
-        action: "Edit / Delete Escalations",
-        roles: { Admin: true, HR: true, Manager: false, Employee: false, Acceptances: false, PM: false, CM: false },
-      },
-      {
-        id: "p9",
-        module: "System",
-        action: "Manage Roles & Permissions",
-        roles: { Admin: true, HR: false, Manager: false, Employee: false, Acceptances: false, PM: false, CM: false },
-      },
-      {
-        id: "p_sys_settings",
-        module: "System",
-        action: "Manage Settings",
-        roles: { Admin: true, HR: false, Manager: false, Employee: false, Acceptances: false, PM: false, CM: false },
-      },
-    ];
-
     const saved = localStorage.getItem("permissions");
     if (saved) {
       try {
         const parsed = JSON.parse(saved) as PermissionNode[];
-        // Map over defaultPerms to keep the new order and drop obsolete ones
-        return defaultPerms.map((dp) => {
+        // Map over DEFAULT_PERMS to keep the new order and drop obsolete ones
+        return DEFAULT_PERMS.map((dp) => {
           const existing = parsed.find((p) => p.id === dp.id);
           return existing ? existing : dp;
         });
       } catch (e) {
-        return defaultPerms;
+        return DEFAULT_PERMS;
       }
     }
-    return defaultPerms;
+    return DEFAULT_PERMS;
   });
 
   React.useEffect(() => {
     localStorage.setItem("permissions", JSON.stringify(permissions));
-    if (isLoaded && isSupabaseConnected) syncPermissions(permissions).catch(console.warn);
+    if (isLoaded && isSupabaseConnected) {
+      handleSyncCall("Permissions", () => syncPermissions(permissions));
+    }
   }, [permissions, isLoaded, isSupabaseConnected]);
 
   React.useEffect(() => {
@@ -824,44 +889,145 @@ export function AppProvider({ children }: { children: ReactNode }) {
       try {
         const dbData = await loadDataFromSupabase();
         if (mounted) {
-          if (dbData.employees.length > 0) setEmployees(dbData.employees);
-          else syncEmployees(employees).catch(console.warn);
+          // 1. Employees: merge by id
+          if (dbData.employees.length > 0) {
+            setEmployees(prev => {
+              const merged = [...dbData.employees];
+              prev.forEach(pItem => {
+                if (!dbData.employees.some(dbItem => dbItem.id === pItem.id)) {
+                  merged.push(pItem);
+                }
+              });
+              return merged;
+            });
+          } else {
+            syncEmployees(employees).catch(console.warn);
+          }
 
-          if (dbData.poBudgets.length > 0) setPoBudgets(dbData.poBudgets);
-          else syncPoBudgets(poBudgets).catch(console.warn);
+          // 2. PO Budgets: merge by id
+          if (dbData.poBudgets.length > 0) {
+            setPoBudgets(prev => {
+              const merged = [...dbData.poBudgets];
+              prev.forEach(pItem => {
+                if (!dbData.poBudgets.some(dbItem => dbItem.id === pItem.id)) {
+                  merged.push(pItem);
+                }
+              });
+              return merged;
+            });
+          } else {
+            syncPoBudgets(poBudgets).catch(console.warn);
+          }
 
-          if (dbData.accounts.length > 0) setAccounts(dbData.accounts);
-          else syncAccounts(accounts).catch(console.warn);
+          // 3. Accounts: merge by id
+          if (dbData.accounts.length > 0) {
+            setAccounts(prev => {
+              const merged = [...dbData.accounts];
+              prev.forEach(pItem => {
+                if (!dbData.accounts.some(dbItem => dbItem.id === pItem.id)) {
+                  merged.push(pItem);
+                }
+              });
+              return merged;
+            });
+          } else {
+            syncAccounts(accounts).catch(console.warn);
+          }
 
-          if (Object.keys(dbData.finConfig).length > 0) setFinConfig(dbData.finConfig);
-          else syncFinConfig(finConfig).catch(console.warn);
+          // 4. Fin Config: merge by key
+          if (Object.keys(dbData.finConfig).length > 0) {
+            setFinConfig(prev => {
+              return { ...prev, ...dbData.finConfig };
+            });
+          } else {
+            syncFinConfig(finConfig).catch(console.warn);
+          }
 
-          if (dbData.poAcceptances.length > 0) setPoAcceptances(dbData.poAcceptances);
-          else syncPoAcceptances(poAcceptances).catch(console.warn);
+          // 5. PO Acceptances: merge by id
+          if (dbData.poAcceptances.length > 0) {
+            setPoAcceptances(prev => {
+              const merged = [...dbData.poAcceptances];
+              prev.forEach(pItem => {
+                if (!dbData.poAcceptances.some(dbItem => dbItem.id === pItem.id)) {
+                  merged.push(pItem);
+                }
+              });
+              return merged;
+            });
+          } else {
+            syncPoAcceptances(poAcceptances).catch(console.warn);
+          }
 
-          if (Object.keys(dbData.salaryOverrides).length > 0) setSalaryOverrides(dbData.salaryOverrides);
-          else syncSalaryOverrides(salaryOverrides).catch(console.warn);
+          // 6. Salary Overrides: merge by key
+          if (Object.keys(dbData.salaryOverrides).length > 0) {
+            setSalaryOverrides(prev => {
+              return { ...prev, ...dbData.salaryOverrides };
+            });
+          } else {
+            syncSalaryOverrides(salaryOverrides).catch(console.warn);
+          }
 
-          if (Object.keys(dbData.safetyRecords).length > 0) setSafetyRecords(dbData.safetyRecords);
-          else syncSafetyRecords(safetyRecords).catch(console.warn);
+          // 7. Safety Records: merge by key
+          if (Object.keys(dbData.safetyRecords).length > 0) {
+            setSafetyRecords(prev => {
+              return { ...prev, ...dbData.safetyRecords };
+            });
+          } else {
+            syncSafetyRecords(safetyRecords).catch(console.warn);
+          }
 
-          if (dbData.users && dbData.users.length > 0) setSystemUsers(dbData.users);
-          else syncUsers(systemUsers).catch(console.warn);
+          // 8. Users: merge by id
+          if (dbData.users && dbData.users.length > 0) {
+            setSystemUsers(prev => {
+              const merged = [...dbData.users];
+              prev.forEach(pItem => {
+                if (!dbData.users.some(dbItem => dbItem.id === pItem.id)) {
+                  merged.push(pItem);
+                }
+              });
+              return merged;
+            });
+          } else {
+            syncUsers(systemUsers).catch(console.warn);
+          }
 
-          if (dbData.escalations.length > 0) setEscalations(dbData.escalations);
-          else syncEscalations(escalations).catch(console.warn);
+          // 9. Escalations: merge by id
+          if (dbData.escalations.length > 0) {
+            setEscalations(prev => {
+              const merged = [...dbData.escalations];
+              prev.forEach(pItem => {
+                if (!dbData.escalations.some(dbItem => dbItem.id === pItem.id)) {
+                  merged.push(pItem);
+                }
+              });
+              return merged;
+            });
+          } else {
+            syncEscalations(escalations).catch(console.warn);
+          }
 
-          if (dbData.permissions.length > 0) setPermissions(dbData.permissions);
+          if (dbData.permissions.length > 0) {
+            setPermissions(() => {
+              return DEFAULT_PERMS.map((dp) => {
+                const existing = dbData.permissions.find((p) => p.id === dp.id);
+                return existing ? existing : dp;
+              });
+            });
+          }
           else syncPermissions(permissions).catch(console.warn);
 
           setIsSupabaseConnected(true);
+          setSyncState('synced');
+          setSyncError(null);
           setIsLoaded(true);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.warn("Failed to load data from Supabase", err);
         if (mounted) {
           // If connection fails, fallback to local storage
           setIsSupabaseConnected(false);
+          setSyncState('offline');
+          setSyncError(`Database connection failed: ${err.message || err}. Changes will save to local storage only.`);
           setIsLoaded(true);
         }
       }
@@ -869,6 +1035,49 @@ export function AppProvider({ children }: { children: ReactNode }) {
     init();
     return () => { mounted = false; };
   }, []);
+
+  const triggerManualSync = async () => {
+    setSyncState('syncing');
+    try {
+      const { loadDataFromSupabase } = await import("../lib/db");
+      if (!isSupabaseConnected) {
+        // Try to connect
+        const dbData = await loadDataFromSupabase();
+        setIsSupabaseConnected(true);
+      }
+      
+      const { 
+        syncEmployees, 
+        syncSafetyRecords, 
+        syncAccounts, 
+        syncPoBudgets, 
+        syncSalaryOverrides, 
+        syncEscalations, 
+        syncPermissions, 
+        syncPoAcceptances, 
+        syncFinConfig, 
+        syncUsers 
+      } = await import("../lib/db");
+
+      await syncUsers(systemUsers);
+      await syncPermissions(permissions);
+      await syncAccounts(accounts);
+      await syncEmployees(employees);
+      await syncSafetyRecords(safetyRecords);
+      await syncPoBudgets(poBudgets);
+      await syncSalaryOverrides(salaryOverrides);
+      await syncPoAcceptances(poAcceptances);
+      await syncFinConfig(finConfig);
+      await syncEscalations(escalations);
+
+      setSyncState('synced');
+      setSyncError(null);
+    } catch (err: any) {
+      setSyncState('error');
+      setSyncError(`Manual sync failed: ${err.message || err}`);
+      throw err;
+    }
+  };
 
   return (
     <AppContext.Provider
@@ -905,6 +1114,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setPermissions,
         theme,
         toggleTheme,
+        syncState,
+        syncError,
+        triggerManualSync,
       }}
     >
       {children}

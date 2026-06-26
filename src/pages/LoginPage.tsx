@@ -9,7 +9,8 @@ import {
   Input,
 } from "../components/ui";
 import { useAppContext, Role } from "../store/AppContext";
-import { BrainCircuit, Sparkles, Sun, Moon } from "lucide-react";
+import { Sparkles, Sun, Moon } from "lucide-react";
+import { AfroLogo } from "../components/AfroLogo";
 
 export function LoginPage() {
   const [username, setUsername] = useState("");
@@ -56,15 +57,15 @@ export function LoginPage() {
       <div className="absolute bottom-[-15%] right-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-600/10 blur-[120px] pointer-events-none"></div>
 
       <Card className="w-full max-w-md shadow-2xl border border-border bg-card-bg/80 backdrop-blur-xl relative z-10 transition-colors duration-200">
-        <CardHeader className="text-center pb-2 pt-8">
-          <div className="mx-auto w-16 h-16 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-blue-500/20 ring-1 ring-border">
-            <BrainCircuit className="w-8 h-8 text-white" />
+        <CardHeader className="text-center pb-2 pt-8 flex flex-col items-center">
+          <div className="mb-4 flex items-center justify-center">
+            <AfroLogo size="xl" />
           </div>
-          <CardTitle className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 mb-1">
+          <CardTitle className="text-2xl font-black tracking-widest text-ink mt-2">
             AFRO APP
           </CardTitle>
           <div className="flex items-center justify-center gap-1.5 text-sm font-medium text-muted-fg mt-2">
-            <Sparkles className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
+            <Sparkles className="w-4 h-4 text-accent" />
             <span>Intelligent HR & Budgets</span>
           </div>
         </CardHeader>
@@ -104,6 +105,15 @@ export function LoginPage() {
             >
               Authenticate System
             </Button>
+
+            <div className="flex flex-col items-center justify-center pt-4 mt-5 text-[0.75rem] text-muted-fg/80 gap-1 select-none border-t border-border/30">
+              <div className="flex items-center gap-1.5 font-medium tracking-wide">
+                <span>Designed & Built by</span>
+                <span className="font-extrabold text-accent bg-accent/10 px-1.5 py-0.5 rounded text-[0.7rem] uppercase tracking-widest">
+                  AI Team
+                </span>
+              </div>
+            </div>
           </form>
         </CardContent>
       </Card>

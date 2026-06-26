@@ -34,6 +34,62 @@ export function CostPage() {
   const selectedMonthIndex = months.indexOf(selectedMonth);
   const startOfSelectedMonth = new Date(selectedYear, selectedMonthIndex, 1);
   const endOfSelectedMonth = new Date(selectedYear, selectedMonthIndex + 1, 0, 23, 59, 59);
+  const totalDaysInMonth = new Date(selectedYear, selectedMonthIndex + 1, 0).getDate();
+
+  const calculateProratedSalary = (emp: any) => {
+    let hiringDateLocal = new Date(0);
+    if (emp.dateHiring) {
+      const parts = emp.dateHiring.split("-");
+      if (parts.length === 3) {
+        hiringDateLocal = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+      } else {
+        hiringDateLocal = new Date(emp.dateHiring);
+      }
+    } else {
+      return 0;
+    }
+
+    let resignDateLocal: Date | null = null;
+    if (emp.dateResign) {
+      const parts = emp.dateResign.split("-");
+      if (parts.length === 3) {
+        resignDateLocal = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+      } else {
+        resignDateLocal = new Date(emp.dateResign);
+      }
+    }
+
+    const actualStart =
+      hiringDateLocal > startOfSelectedMonth
+        ? hiringDateLocal
+        : startOfSelectedMonth;
+    const actualEnd =
+      resignDateLocal && resignDateLocal < endOfSelectedMonth
+        ? resignDateLocal
+        : endOfSelectedMonth;
+
+    if (actualStart > actualEnd) return 0;
+
+    const utcStart = Date.UTC(
+      actualStart.getFullYear(),
+      actualStart.getMonth(),
+      actualStart.getDate(),
+    );
+    const utcEnd = Date.UTC(
+      actualEnd.getFullYear(),
+      actualEnd.getMonth(),
+      actualEnd.getDate(),
+    );
+
+    const daysWorked =
+      Math.floor((utcEnd - utcStart) / (1000 * 60 * 60 * 24)) + 1;
+
+    if (daysWorked >= totalDaysInMonth) {
+      return emp.netSalary || 0;
+    }
+
+    return Math.round(((emp.netSalary || 0) / totalDaysInMonth) * daysWorked);
+  };
 
   const filteredEmployees = employees.filter((e) => {
     // Check if active in this month
@@ -118,13 +174,16 @@ export function CostPage() {
       "Total Allowance",
       "Mobile",
       "Total Safety Amount",
+      "Other Cost (Net)",
+      "Labtop",
+      "Total Other Cost (EGP)",
       "Total Cost"
     ];
 
     const csvRows = [headers.join(",")];
 
     filteredEmployees.forEach(emp => {
-      const netSalary = emp.netSalary || 0;
+      const netSalary = calculateProratedSalary(emp);
       const siEmp = emp.socialInsuranceEmployee || 0;
       const siComp = emp.socialInsuranceCompany || 0;
       const taxes = emp.taxes || 0;
@@ -139,6 +198,8 @@ export function CostPage() {
         gift: selectedMonth === "Mar" ? 500 : 0,
         retro: 0,
         mobile: 334.21,
+        laptop: 0,
+        otherCostNet: 0,
       };
 
       const ot = overrides.ot || 0;
@@ -146,6 +207,15 @@ export function CostPage() {
       const gift = overrides.gift || 0;
       const retro = overrides.retro || 0;
       const mobile = overrides.mobile || 0;
+
+      const laptop =
+        overrides.laptop !== undefined
+          ? overrides.laptop
+          : overrides.bonus !== undefined
+            ? overrides.bonus
+            : 0;
+      const otherCostNet = overrides.otherCostNet !== undefined ? overrides.otherCostNet : 0;
+      const totalOtherCost = laptop + otherCostNet;
 
       const safetyDataKey = `${emp.id}_${selectedMonth}_${selectedYear}`;
       const safetyData = safetyRecords[safetyDataKey] || {
@@ -166,7 +236,7 @@ export function CostPage() {
         (safetyData.ppe || 0);
 
       const totalAllowance = ot + topHero + gift + retro;
-      const totalCost = gross + totalAllowance + mobile + totalSafetyAmount;
+      const totalCost = gross + totalAllowance + mobile + totalSafetyAmount + totalOtherCost;
 
       const poNumbersStr = (overrides.poNumbers && overrides.poNumbers.length > 0) 
         ? overrides.poNumbers.join(" | ") 
@@ -190,6 +260,9 @@ export function CostPage() {
         totalAllowance || 0,
         mobile || 0,
         totalSafetyAmount || 0,
+        otherCostNet || 0,
+        laptop || 0,
+        totalOtherCost || 0,
         totalCost || 0
       ].map(val => `"${val}"`).join(",");
       
@@ -283,19 +356,22 @@ export function CostPage() {
                 <th className="text-right py-3 px-4 border-b font-medium text-purple-600">Total Allowance</th>
                 <th className="text-right py-3 px-4 border-b">Mobile</th>
                 <th className="text-right py-3 px-4 border-b">Total Safety Amount</th>
+                <th className="text-right py-3 px-4 border-b text-ink font-medium">Other Cost (Net)</th>
+                <th className="text-right py-3 px-4 border-b text-accent font-medium">Labtop</th>
+                <th className="text-right py-3 px-4 border-b text-amber-600 font-medium">Total Other Cost (EGP)</th>
                 <th className="text-right py-3 px-4 border-b text-accent font-bold">Total Cost</th>
               </tr>
             </thead>
             <tbody className="text-sm">
               {filteredEmployees.length === 0 ? (
                 <tr>
-                  <td colSpan={12} className="text-center py-8 text-muted-fg">
+                  <td colSpan={15} className="text-center py-8 text-muted-fg">
                     No employees found.
                   </td>
                 </tr>
               ) : (
                 filteredEmployees.map((emp) => {
-                  const netSalary = emp.netSalary || 0;
+                  const netSalary = calculateProratedSalary(emp);
                   const siEmp = emp.socialInsuranceEmployee || 0;
                   const siComp = emp.socialInsuranceCompany || 0;
                   const taxes = emp.taxes || 0;
@@ -310,6 +386,8 @@ export function CostPage() {
                     gift: selectedMonth === "Mar" ? 500 : 0,
                     retro: 0,
                     mobile: 334.21,
+                    laptop: 0,
+                    otherCostNet: 0
                   };
 
                   const ot = overrides.ot || 0;
@@ -336,8 +414,17 @@ export function CostPage() {
                     (safetyData.firstAid || 0) + 
                     (safetyData.ppe || 0);
 
+                  const laptop =
+                    overrides.laptop !== undefined
+                      ? overrides.laptop
+                      : overrides.bonus !== undefined
+                        ? overrides.bonus
+                        : 0;
+                  const otherCostNet = overrides.otherCostNet !== undefined ? overrides.otherCostNet : 0;
+                  const totalOtherCost = laptop + otherCostNet;
+
                   const totalAllowance = ot + topHero + gift + retro;
-                  const totalCost = gross + totalAllowance + mobile + totalSafetyAmount;
+                  const totalCost = gross + totalAllowance + mobile + totalSafetyAmount + totalOtherCost;
 
                   const isEditingPoNumber = editingField?.id === emp.id && editingField.field === 'poNumber';
                   const isEditingPoAmountRequest = editingField?.id === emp.id && editingField.field === 'poAmountRequest';
@@ -465,6 +552,15 @@ export function CostPage() {
                       </td>
                       <td className="text-right px-4 py-3">
                         {formatVal(totalSafetyAmount)}
+                      </td>
+                      <td className="text-right px-4 py-3">
+                        {formatVal(otherCostNet)}
+                      </td>
+                      <td className="text-right px-4 py-3">
+                        {formatVal(laptop)}
+                      </td>
+                      <td className="text-right px-4 py-3 text-amber-600 font-medium">
+                        {formatVal(totalOtherCost)}
                       </td>
                       <td className="text-right px-4 py-3 font-bold text-accent bg-muted/20">
                         {formatVal(totalCost)}

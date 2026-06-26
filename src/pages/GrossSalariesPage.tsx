@@ -2,7 +2,7 @@ import React, { useState, useRef } from "react";
 import { Card, CardHeader, CardTitle, Button, Input } from "../components/ui";
 import { useAppContext, Employee } from "../store/AppContext";
 import { Search, Download, Upload } from "lucide-react";
-import { cn } from "../lib/utils";
+import { cn, parseFlexibleDate } from "../lib/utils";
 
 const formatVal = (val: number | undefined | null) => {
   if (!val) return "-";
@@ -13,6 +13,57 @@ export function GrossSalariesPage() {
   const { employees, visibleEmployees, setEmployees, user, permissions } = useAppContext();
   const [searchTerm, setSearchTerm] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [selectedMonth, setSelectedMonth] = useState("Jan");
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
+  const months = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  ];
+  const years = [2024, 2025, 2026, 2027];
+
+  const selectedMonthIndex = months.indexOf(selectedMonth);
+  const startOfSelectedMonth = new Date(selectedYear, selectedMonthIndex, 1);
+  const endOfSelectedMonth = new Date(selectedYear, selectedMonthIndex + 1, 0, 23, 59, 59);
+  const totalDaysInMonth = new Date(selectedYear, selectedMonthIndex + 1, 0).getDate();
+
+  const calculateProratedSalary = (emp: Employee) => {
+    const hiringDateLocal = parseFlexibleDate(emp.dateHiring);
+    if (!hiringDateLocal) return 0;
+
+    let resignDateLocal = parseFlexibleDate(emp.dateResign);
+
+    const actualStart =
+      hiringDateLocal > startOfSelectedMonth
+        ? hiringDateLocal
+        : startOfSelectedMonth;
+    const actualEnd =
+      resignDateLocal && resignDateLocal < endOfSelectedMonth
+        ? resignDateLocal
+        : endOfSelectedMonth;
+
+    if (actualStart > actualEnd) return 0;
+
+    const utcStart = Date.UTC(
+      actualStart.getFullYear(),
+      actualStart.getMonth(),
+      actualStart.getDate(),
+    );
+    const utcEnd = Date.UTC(
+      actualEnd.getFullYear(),
+      actualEnd.getMonth(),
+      actualEnd.getDate(),
+    );
+
+    const daysWorked =
+      Math.floor((utcEnd - utcStart) / (1000 * 60 * 60 * 24)) + 1;
+
+    if (daysWorked >= totalDaysInMonth) {
+      return emp.netSalary || 0;
+    }
+
+    return Math.round(((emp.netSalary || 0) / totalDaysInMonth) * daysWorked);
+  };
 
   const hasPermission = (module: string, action: string) => {
     if (!user) return false;
@@ -30,11 +81,21 @@ export function GrossSalariesPage() {
     );
   };
 
-  const filteredEmployees = visibleEmployees.filter((emp) =>
-    emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.hrCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.position.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredEmployees = visibleEmployees.filter((emp) => {
+    const hiringDateLocal = parseFlexibleDate(emp.dateHiring);
+    if (!hiringDateLocal) return false;
+
+    let resignDateLocal = parseFlexibleDate(emp.dateResign);
+
+    if (hiringDateLocal > endOfSelectedMonth) return false;
+    if (resignDateLocal && resignDateLocal < startOfSelectedMonth) return false;
+
+    return (
+      emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      emp.hrCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      emp.position.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  });
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -105,7 +166,7 @@ export function GrossSalariesPage() {
     const csvRows = [headers.join(",")];
 
     filteredEmployees.forEach(emp => {
-      const netSalary = emp.netSalary || 0;
+      const netSalary = calculateProratedSalary(emp);
       const siEmp = emp.socialInsuranceEmployee || 0;
       const siComp = emp.socialInsuranceCompany || 0;
       const taxes = emp.taxes || 0;
@@ -131,7 +192,7 @@ export function GrossSalariesPage() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `gross_salaries.csv`);
+    link.setAttribute("download", `gross_salaries_${selectedMonth}_${selectedYear}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -182,6 +243,40 @@ export function GrossSalariesPage() {
       </div>
 
       <Card>
+        <CardHeader className="py-4 border-b bg-muted flex flex-col gap-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+              {months.map((m) => (
+                <Button
+                  key={m}
+                  variant={selectedMonth === m ? "default" : "ghost"}
+                  onClick={() => setSelectedMonth(m)}
+                  className="rounded-full px-4 h-8 text-xs sm:text-sm"
+                >
+                  {m}
+                </Button>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-3">
+              <label className="text-xs font-bold text-muted-fg/80 uppercase tracking-wider">
+                Year:
+              </label>
+              <select
+                className="bg-card-bg border border-border rounded-md px-2 py-1 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-accent"
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
+              >
+                {years.map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </CardHeader>
+
         <div className="overflow-x-auto max-h-[600px] no-scrollbar">
           <table className="data-table min-w-[800px] whitespace-nowrap">
             <thead>
@@ -199,12 +294,12 @@ export function GrossSalariesPage() {
               {filteredEmployees.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="text-center py-8 text-muted-fg">
-                    No employees found.
+                    No employees found for {selectedMonth} {selectedYear}.
                   </td>
                 </tr>
               ) : (
                 filteredEmployees.map((emp) => {
-                  const netSalary = emp.netSalary || 0;
+                  const netSalary = calculateProratedSalary(emp);
                   const siEmp = emp.socialInsuranceEmployee || 0;
                   const siComp = emp.socialInsuranceCompany || 0;
                   const taxes = emp.taxes || 0;
@@ -218,14 +313,19 @@ export function GrossSalariesPage() {
                         <div className="text-[10px] text-muted-fg mt-0.5">{emp.hrCode} • {emp.position}</div>
                       </td>
                       <td className="text-right px-4 py-3 font-medium">
-                        {formatVal(netSalary)}
+                        <div>{formatVal(netSalary)}</div>
+                        {netSalary !== emp.netSalary && (
+                          <span className="block text-[10px] text-muted-fg/80">
+                            Prorated
+                          </span>
+                        )}
                       </td>
                       <td className="text-right px-2 py-2">
                         <input 
                           type="number"
                           step="any"
                           className="w-[100px] h-8 px-2 bg-muted/50 focus:bg-card-bg border border-transparent focus:border-accent text-right outline-none rounded-md transition-all"
-                          value={emp.socialInsuranceEmployee === undefined ? "" : emp.socialInsuranceEmployee}
+                          value={emp.socialInsuranceEmployee ?? ""}
                           placeholder="0"
                           disabled={!canEdit}
                           onChange={(e) => handleUpdate(emp.id, 'socialInsuranceEmployee', parseFloat(e.target.value))}
@@ -236,7 +336,7 @@ export function GrossSalariesPage() {
                           type="number"
                           step="any"
                           className="w-[100px] h-8 px-2 bg-muted/50 focus:bg-card-bg border border-transparent focus:border-accent text-right outline-none rounded-md transition-all"
-                          value={emp.socialInsuranceCompany === undefined ? "" : emp.socialInsuranceCompany}
+                          value={emp.socialInsuranceCompany ?? ""}
                           placeholder="0"
                           disabled={!canEdit}
                           onChange={(e) => handleUpdate(emp.id, 'socialInsuranceCompany', parseFloat(e.target.value))}
@@ -247,7 +347,7 @@ export function GrossSalariesPage() {
                           type="number"
                           step="any"
                           className="w-[100px] h-8 px-2 bg-muted/50 focus:bg-card-bg border border-transparent focus:border-accent text-right outline-none rounded-md transition-all"
-                          value={emp.taxes === undefined ? "" : emp.taxes}
+                          value={emp.taxes ?? ""}
                           placeholder="0"
                           disabled={!canEdit}
                           onChange={(e) => handleUpdate(emp.id, 'taxes', parseFloat(e.target.value))}
@@ -258,7 +358,7 @@ export function GrossSalariesPage() {
                           type="number"
                           step="any"
                           className="w-[100px] h-8 px-2 bg-muted/50 focus:bg-card-bg border border-transparent focus:border-accent text-right outline-none rounded-md transition-all"
-                          value={emp.medical === undefined ? "" : emp.medical}
+                          value={emp.medical ?? ""}
                           placeholder="0"
                           disabled={!canEdit}
                           onChange={(e) => handleUpdate(emp.id, 'medical', parseFloat(e.target.value))}

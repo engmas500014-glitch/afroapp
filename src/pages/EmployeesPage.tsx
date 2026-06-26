@@ -48,6 +48,7 @@ export function EmployeesPage() {
     phone2: "",
     dateHiring: "",
     netSalary: 0,
+    bankAccount: "",
   });
 
   const toggleExpand = (id: string, e: React.MouseEvent) => {
@@ -97,6 +98,7 @@ export function EmployeesPage() {
       phone2: "",
       dateHiring: "",
       netSalary: 0,
+      bankAccount: "",
     });
     setIsAddModalOpen(true);
   };
@@ -120,6 +122,7 @@ export function EmployeesPage() {
       dateResign: "",
       status: "Active" as const,
       netSalary: Number(newEmp.netSalary),
+      bankAccount: newEmp.bankAccount,
     };
     
     // Check if ID already exists, if so update it, else add it
@@ -146,13 +149,30 @@ export function EmployeesPage() {
       phone2: "",
       dateHiring: "",
       netSalary: 0,
+      bankAccount: "",
     });
   };
 
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
   const handleEditClick = (emp: Employee, index: number) => {
-    setEditingEmp({ ...emp });
+    setEditingEmp({
+      ...emp,
+      id: emp.id || "",
+      hrCode: emp.hrCode || "",
+      name: emp.name || "",
+      position: emp.position || "",
+      account: emp.account || "",
+      project: emp.project || "",
+      email: emp.email || "",
+      phone1: emp.phone1 || "",
+      phone2: emp.phone2 || "",
+      dateHiring: emp.dateHiring || "",
+      netSalary: emp.netSalary || 0,
+      bankAccount: emp.bankAccount || "",
+      status: emp.status || "Active",
+      dateResign: emp.dateResign || "",
+    });
     setEditingIndex(index);
     setIsEditModalOpen(true);
   };

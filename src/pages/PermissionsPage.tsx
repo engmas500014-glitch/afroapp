@@ -38,6 +38,10 @@ export function PermissionsPage() {
   const [permissions, setPermissions] = useState(globalPermissions);
   const [isSaving, setIsSaving] = useState(false);
 
+  React.useEffect(() => {
+    setPermissions(globalPermissions);
+  }, [globalPermissions]);
+
   const [newUser, setNewUser] = useState({
     name: "",
     password: "",
@@ -115,9 +119,9 @@ export function PermissionsPage() {
   const handleEditUserClick = (u: any) => {
     setEditingUserId(u.id);
     setEditingUserData({
-      name: u.name,
+      name: u.name || "",
       password: u.password || "",
-      role: u.role,
+      role: u.role || "Employee",
       projects: u.projects || [],
     });
   };

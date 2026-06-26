@@ -17,7 +17,7 @@ import {
 import { parseFlexibleDate } from "../lib/utils";
 
 export function DashboardPage() {
-  const { visibleEmployees: employees, visiblePoBudgets: poBudgets, salaryOverrides, finConfig } = useAppContext();
+  const { visibleEmployees: employees, visiblePoBudgets: poBudgets, salaryOverrides, finConfig, poAcceptances } = useAppContext();
 
   // Dynamic selector states
   const uniqueAccounts = Array.from(
@@ -50,6 +50,7 @@ export function DashboardPage() {
     : (availableYears[0] || new Date().getFullYear());
 
   const [selectedYear, setSelectedYear] = React.useState<number>(defaultYear);
+  const [selectedMonth, setSelectedMonth] = React.useState<string>("All");
 
   const getGrossMultiplier = (projectName: string | undefined, key: string) => {
     const p = projectName && projectName !== "All" ? projectName : "default";
@@ -64,11 +65,34 @@ export function DashboardPage() {
     return 1 + (pct / 100);
   };
 
-  // Filter active employees based on current account and project
+  const monthsOrder = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+  // Filter active employees based on current account, project, and month
   const activeEmployees = employees.filter((e) => {
     if (e.status !== "Active") return false;
     if (selectedAccount !== "All" && e.account !== selectedAccount) return false;
     if (selectedProject !== "All" && e.project !== selectedProject) return false;
+    
+    if (selectedMonth !== "All") {
+      const monthIndex = monthsOrder.indexOf(selectedMonth);
+      if (monthIndex !== -1) {
+        const startOfBudgetMonth = new Date(selectedYear, monthIndex, 1);
+        const endOfBudgetMonth = new Date(selectedYear, monthIndex + 1, 0);
+        
+        if (!e.dateHiring) return false;
+        const [hYear, hMonth, hDay] = e.dateHiring.split("-").map(Number);
+        const hiringDateLocal = new Date(hYear, hMonth - 1, hDay, 0, 0, 0);
+        if (isNaN(hiringDateLocal.getTime())) return false;
+
+        let resignDateLocal = null;
+        if (e.dateResign) {
+          const [rYear, rMonth, rDay] = e.dateResign.split("-").map(Number);
+          resignDateLocal = new Date(rYear, rMonth - 1, rDay, 0, 0, 0);
+        }
+        if (hiringDateLocal > endOfBudgetMonth) return false;
+        if (resignDateLocal && resignDateLocal < startOfBudgetMonth) return false;
+      }
+    }
     return true;
   }).length;
 
@@ -213,50 +237,129 @@ export function DashboardPage() {
     };
   });
 
-  const totalPOAmount = computedBudgets.reduce(
-    (sum, p) => sum + (p.poAmount || 0),
-    0,
-  );
-  const totalCost = computedBudgets.reduce(
+  const monthlyFilteredBudgets = selectedMonth === "All"
+    ? computedBudgets
+    : computedBudgets.filter((p) => p.month === selectedMonth);
+
+  // Build a map of poNumber -> { accounts: Set<string>, projects: Set<string> }
+  const poMapping = React.useMemo(() => {
+    const map: Record<string, { accounts: Set<string>; projects: Set<string> }> = {};
+    const monthsToCheck = selectedMonth === "All"
+      ? ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+      : [selectedMonth];
+
+    employees.forEach((emp) => {
+      monthsToCheck.forEach((m) => {
+        const key = `${emp.id}_${m}_${selectedYear}`;
+        const ov = salaryOverrides[key];
+        if (ov && ov.poNumbers) {
+          ov.poNumbers.forEach((poNum) => {
+            if (!poNum) return;
+            if (!map[poNum]) {
+              map[poNum] = { accounts: new Set(), projects: new Set() };
+            }
+            if (emp.account) map[poNum].accounts.add(emp.account);
+            if (emp.project) map[poNum].projects.add(emp.project);
+          });
+        }
+      });
+    });
+    return map;
+  }, [employees, salaryOverrides, selectedYear, selectedMonth]);
+
+  // Calculate totalPOAmount from poAcceptances instead of poBudgets
+  const totalPOAmount = React.useMemo(() => {
+    const yearAcceptances = poAcceptances.filter((r) => r.year === selectedYear);
+    
+    const activeAcceptances = selectedMonth === "All"
+      ? yearAcceptances
+      : yearAcceptances.filter((r) => r.month === selectedMonth);
+
+    const filteredAccs = activeAcceptances.filter((r) => {
+      if (selectedAccount !== "All") {
+        const info = poMapping[r.poNumber];
+        if (!info || !info.accounts.has(selectedAccount)) return false;
+      }
+      if (selectedProject !== "All") {
+        const info = poMapping[r.poNumber];
+        if (!info || !info.projects.has(selectedProject)) return false;
+      }
+      return true;
+    });
+
+    const uniquePoNumbers = Array.from(new Set(filteredAccs.map((r) => r.poNumber).filter(Boolean)));
+    
+    return uniquePoNumbers.reduce((sum, poNum) => {
+      const globalAmount = poAcceptances
+        .filter((r) => r.poNumber === poNum)
+        .reduce((s, r) => s + (Number(r.amountPo) || 0), 0);
+      return sum + globalAmount;
+    }, 0);
+  }, [poAcceptances, selectedYear, selectedMonth, selectedAccount, selectedProject, poMapping]);
+
+  const totalCost = monthlyFilteredBudgets.reduce(
     (sum, p) => sum + p.totalActualCost,
     0,
   );
   const remainingBudget = totalPOAmount - totalCost;
 
   // Chronologically sort monthly chart data
-  const monthsOrder = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const chartData = [...computedBudgets]
+  const chartData = [...monthlyFilteredBudgets]
     .sort((a, b) => monthsOrder.indexOf(a.month) - monthsOrder.indexOf(b.month))
-    .map((po) => ({
-      month: po.month,
-      PO: po.poAmount,
-      Actual: po.totalActualCost,
-    }));
+    .map((po) => {
+      // Find PO amount from poAcceptances for this specific month
+      const monthAcceptances = poAcceptances.filter((r) => r.year === selectedYear && r.month === po.month);
+      const filteredAccs = monthAcceptances.filter((r) => {
+        if (selectedAccount !== "All") {
+          const info = poMapping[r.poNumber];
+          if (!info || !info.accounts.has(selectedAccount)) return false;
+        }
+        if (selectedProject !== "All") {
+          const info = poMapping[r.poNumber];
+          if (!info || !info.projects.has(selectedProject)) return false;
+        }
+        return true;
+      });
+
+      const uniquePoNumbers = Array.from(new Set(filteredAccs.map((r) => r.poNumber).filter(Boolean)));
+      const monthPOAmount = uniquePoNumbers.reduce((sum, poNum) => {
+        const globalAmount = poAcceptances
+          .filter((r) => r.poNumber === poNum)
+          .reduce((s, r) => s + (Number(r.amountPo) || 0), 0);
+        return sum + globalAmount;
+      }, 0);
+
+      return {
+        month: po.month,
+        PO: monthPOAmount,
+        Actual: po.totalActualCost,
+      };
+    });
 
   const statCards = [
     {
-      title: "Active Employees",
+      title: selectedMonth === "All" ? "Active Employees" : `Active Employees (${selectedMonth})`,
       value: activeEmployees,
       icon: Users,
       color: "text-blue-600 dark:text-blue-400",
       bg: "bg-blue-100 dark:bg-blue-900/30",
     },
     {
-      title: "Total PO Amount (YTD)",
+      title: selectedMonth === "All" ? "Total PO Amount (YTD)" : `Total PO Amount (${selectedMonth})`,
       value: `${totalPOAmount.toLocaleString()}`,
       icon: DollarSign,
       color: "text-emerald-600 dark:text-emerald-400",
       bg: "bg-emerald-100 dark:bg-emerald-900/30",
     },
     {
-      title: "Total Actual Cost",
+      title: selectedMonth === "All" ? "Total Actual Cost" : `Actual Cost (${selectedMonth})`,
       value: `${totalCost.toLocaleString()}`,
       icon: Activity,
       color: "text-amber-600 dark:text-amber-400",
       bg: "bg-amber-100 dark:bg-amber-900/30",
     },
     {
-      title: "Remaining Budget",
+      title: selectedMonth === "All" ? "Remaining Budget" : `Remaining Budget (${selectedMonth})`,
       value: `${remainingBudget.toLocaleString()}`,
       icon: Wallet,
       color: "text-purple-600 dark:text-purple-400",
@@ -305,6 +408,19 @@ export function DashboardPage() {
             {uniqueProjects.map((proj) => (
               <option key={proj} value={proj}>
                 {proj}
+              </option>
+            ))}
+          </select>
+
+          <select
+            className="border-border rounded-lg text-xs py-1.5 px-2.5 focus:outline-none focus:ring-1 focus:ring-accent border bg-card-bg text-ink font-medium"
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+          >
+            <option value="All">All Months</option>
+            {monthsOrder.map((m) => (
+              <option key={m} value={m}>
+                {m}
               </option>
             ))}
           </select>

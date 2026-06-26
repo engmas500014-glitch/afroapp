@@ -17,6 +17,7 @@ import { EscalationsPage } from './pages/EscalationsPage';
 import { POAcceptancesPage } from './pages/POAcceptancesPage';
 
 import { CostPage } from './pages/CostPage';
+import { OtherCostPage } from './pages/OtherCostPage';
 
 const ProtectedRoute = () => {
   const { user, permissions } = useAppContext();
@@ -43,6 +44,9 @@ const ProtectedRoute = () => {
       break;
     case '/salaries':
       hasAccess = hasPermission('Salaries', 'View Monthly Salaries');
+      break;
+    case '/other-cost':
+      hasAccess = hasPermission('Other Cost', 'View Other Cost') || user?.role === 'Admin' || user?.role === 'HR';
       break;
     case '/gross-salaries':
       hasAccess = hasPermission('Gross Salaries', 'View Gross Salaries') || user?.role === 'Admin' || user?.role === 'HR';
@@ -78,6 +82,7 @@ const ProtectedRoute = () => {
           { path: '/', module: 'Dashboard', action: 'View Metrics & Charts' },
           { path: '/employees', module: 'Employees', action: 'View Employee List' },
           { path: '/salaries', module: 'Salaries', action: 'View Monthly Salaries' },
+          { path: '/other-cost', module: 'Other Cost', action: 'View Other Cost' },
           { path: '/gross-salaries', module: 'Gross Salaries', action: 'View Gross Salaries' },
           { path: '/cost', module: 'Cost', action: 'View Cost Page' },
           { path: '/safety', module: 'Safety', action: 'Manage Safety' },
@@ -113,6 +118,7 @@ function AppRoutes() {
           <Route path="/" element={<DashboardPage />} />
           <Route path="/employees" element={<EmployeesPage />} />
           <Route path="/salaries" element={<SalariesPage />} />
+          <Route path="/other-cost" element={<OtherCostPage />} />
           <Route path="/gross-salaries" element={<GrossSalariesPage />} />
           <Route path="/cost" element={<CostPage />} />
           <Route path="/safety" element={<SafetyPage />} />

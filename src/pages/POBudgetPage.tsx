@@ -1210,7 +1210,7 @@ export function POBudgetPage() {
                       <input
                         type="number"
                         step="any"
-                        value={row.actualBreakfast}
+                        value={row.actualBreakfast ?? ""}
                         onChange={(e) =>
                           handleInlineUpdate(
                             row.id,
@@ -1241,7 +1241,7 @@ export function POBudgetPage() {
                       <input
                         type="number"
                         step="any"
-                        value={row.actualAnnual}
+                        value={row.actualAnnual ?? ""}
                         onChange={(e) =>
                           handleInlineUpdate(
                             row.id,
@@ -1310,7 +1310,7 @@ export function POBudgetPage() {
                       <input
                         type="number"
                         step="any"
-                        value={row.actualLaptop}
+                        value={row.actualLaptop ?? ""}
                         onChange={(e) =>
                           handleInlineUpdate(
                             row.id,

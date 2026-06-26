@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { cn } from "../lib/utils";
 import {
   Card,
   CardHeader,
@@ -32,8 +33,21 @@ export function SettingsPage() {
     setFinConfig,
     user,
     permissions,
+    employees,
+    poBudgets,
+    poAcceptances,
+    salaryOverrides,
+    safetyRecords,
+    systemUsers,
+    escalations,
+    syncState,
+    syncError,
+    triggerManualSync,
   } = useAppContext();
   
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState("");
+  const [testResult, setTestResult] = useState<{ success: boolean; msg: string } | null>(null);
   const allProjects = Array.from(new Set(accounts.flatMap(acc => acc.projects)));
   const [newPosition, setNewPosition] = useState("");
   const [newAccount, setNewAccount] = useState("");
@@ -270,26 +284,78 @@ export function SettingsPage() {
 
       <Card>
         <CardHeader className="border-b border-border bg-muted/50">
-          <CardTitle>Database Connection (Supabase)</CardTitle>
+          <CardTitle>Database Connection & Synchronization (Supabase)</CardTitle>
         </CardHeader>
         <CardContent className="p-6">
           <p className="text-sm text-muted-fg mb-4">
-            If you are experiencing issues with data not saving, use the button below to test the connection to your Supabase instance.
+            Test your connection to the Supabase database or manually trigger a full synchronization. This will push all your current local state (employees, financial configurations, safety records, and more) into the Supabase database.
           </p>
-          <Button 
-            onClick={async () => {
-              try {
-                const { supabase } = await import('../lib/supabase');
-                const { error } = await supabase.from('users').select('count', { count: 'exact', head: true });
-                if (error) throw error;
-                alert('Connection to Supabase is successful!');
-              } catch (err: any) {
-                alert(`Connection failed:\n${err.message}\n\nPlease make sure:\n1. Supabase is running at the provided URL.\n2. You are using HTTP, which might be blocked by the browser due to Mixed Content (since this site is HTTPS).`);
-              }
-            }}
-          >
-            Test Connection
-          </Button>
+          
+          <div className="flex flex-wrap gap-3">
+            <Button 
+              onClick={async () => {
+                setTestResult(null);
+                try {
+                  const { supabase } = await import('../lib/supabase');
+                  const { error } = await supabase.from('users').select('count', { count: 'exact', head: true });
+                  if (error) throw error;
+                  setTestResult({
+                    success: true,
+                    msg: "Successfully connected to Supabase! SELECT query verified successfully."
+                  });
+                } catch (err: any) {
+                  setTestResult({
+                    success: false,
+                    msg: `Connection failed: ${err.message || err}. Please ensure Supabase credentials are valid and Row-Level Security (RLS) is disabled or properly configured.`
+                  });
+                }
+              }}
+              variant="outline"
+            >
+              Test Connection
+            </Button>
+
+            <Button 
+              disabled={isSyncing || syncState === 'syncing'}
+              onClick={async () => {
+                setIsSyncing(true);
+                setSyncStatus("Initiating full synchronization...");
+                setTestResult(null);
+                try {
+                  await triggerManualSync();
+                  setSyncStatus("All tables successfully synchronized with Supabase!");
+                } catch (err: any) {
+                  setSyncStatus(`Sync failed: ${err.message || err}`);
+                } finally {
+                  setIsSyncing(false);
+                }
+              }}
+            >
+              {isSyncing || syncState === 'syncing' ? "Syncing..." : "Sync All Local Data to Supabase"}
+            </Button>
+          </div>
+
+          {testResult && (
+            <div className={cn(
+              "mt-4 p-3.5 rounded-lg text-xs font-mono border",
+              testResult.success 
+                ? "bg-green-500/10 text-green-500 border-green-500/20" 
+                : "bg-red-500/10 text-red-500 border-red-500/20"
+            )}>
+              <span className="font-bold uppercase tracking-wider">{testResult.success ? "Success:" : "Error:"}</span> {testResult.msg}
+            </div>
+          )}
+
+          {(syncStatus || syncError) && (
+            <div className={cn(
+              "mt-4 p-3.5 border rounded-lg text-xs font-mono",
+              syncError 
+                ? "bg-red-500/10 text-red-500 border-red-500/20" 
+                : "bg-slate-100 dark:bg-slate-800 border-border text-ink"
+            )}>
+              <strong>Sync Status:</strong> {syncError || syncStatus}
+            </div>
+          )}
         </CardContent>
       </Card>
 

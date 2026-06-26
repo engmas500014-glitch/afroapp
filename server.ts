@@ -31,7 +31,7 @@ async function startServer() {
        return;
     }
 
-    const { base = netSalary, ot = 0, topHero = 0, gift = 0, retro = 0, mobile = 0 } = details || {};
+    const { base = netSalary, ot = 0, topHero = 0, gift = 0, retro = 0, mobile = 0, otherCostNet = 0 } = details || {};
     const bonus = details ? details.bonus : 0;
 
     try {
@@ -71,6 +71,10 @@ async function startServer() {
               ${mobile ? `<tr>
                 <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #4a5568;">Mobile Allowance</td>
                 <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: right; color: #718096;">+ EGP ${mobile.toLocaleString()}</td>
+              </tr>` : ''}
+              ${otherCostNet ? `<tr>
+                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #4a5568;">Other Cost (Net)</td>
+                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: right; color: #718096;">+ EGP ${otherCostNet.toLocaleString()}</td>
               </tr>` : ''}
               <tr style="background-color: #ebf8ff;">
                 <td style="padding: 12px; border-bottom: 2px solid #2b6cb0; font-weight: bold; font-size: 16px; color: #2c5282;">Total Net Salary</td>
