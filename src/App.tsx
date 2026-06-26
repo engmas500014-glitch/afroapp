@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { AppProvider, useAppContext } from './store/AppContext';
 import { Layout } from './components/Layout';
 import { LoginPage } from './pages/LoginPage';
@@ -137,9 +137,9 @@ function AppRoutes() {
 export default function App() {
   return (
     <AppProvider>
-      <BrowserRouter>
+      <HashRouter>
         <AppRoutes />
-      </BrowserRouter>
+      </HashRouter>
     </AppProvider>
   );
 }
