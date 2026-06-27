@@ -188,25 +188,40 @@ export function SalariesPage() {
 
     setSendingEmpId(emp.id);
     try {
-      const response = await fetch("/api/send-payslip", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: emp.email,
-          employeeName: emp.name,
-          netSalary,
-          details: {
-            base: currentNetSalary,
-            ot: overrides.ot,
-            bonus: topHero,
-            gift: overrides.gift,
-            retro: overrides.retro,
-            mobile: overrides.mobile,
-          },
-          month: selectedMonth,
-          year: selectedYear,
-        }),
-      });
+      let response;
+      let simulated = false;
+      try {
+        response = await fetch("/api/send-payslip", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: emp.email,
+            employeeName: emp.name,
+            netSalary,
+            details: {
+              base: currentNetSalary,
+              ot: overrides.ot,
+              bonus: topHero,
+              gift: overrides.gift,
+              retro: overrides.retro,
+              mobile: overrides.mobile,
+            },
+            month: selectedMonth,
+            year: selectedYear,
+          }),
+        });
+      } catch (fetchErr) {
+        simulated = true;
+      }
+
+      if (simulated || !response) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        showNotification(
+          `تمت محاكاة إرسال قسيمة الراتب بنجاح إلى ${emp.name} (وضع التشغيل التجريبي بدون خادم)`,
+          "success"
+        );
+        return;
+      }
 
       const contentType = response.headers.get("content-type");
       if (contentType && contentType.indexOf("application/json") !== -1) {
@@ -217,8 +232,10 @@ export function SalariesPage() {
           "success",
         );
       } else {
-        throw new Error(
-          "API not available. This feature requires the Node.js backend server to be running (cannot be used on pure static hosting like Netlify).",
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        showNotification(
+          `تمت محاكاة إرسال قسيمة الراتب بنجاح إلى ${emp.name} (وضع التشغيل التجريبي بدون خادم)`,
+          "success"
         );
       }
     } catch (error: any) {
@@ -278,15 +295,30 @@ export function SalariesPage() {
         );
       }
 
-      const response = await fetch("/api/send-all-payslips", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          employees: payload,
-          month: selectedMonth,
-          year: selectedYear,
-        }),
-      });
+      let response;
+      let simulated = false;
+      try {
+        response = await fetch("/api/send-all-payslips", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            employees: payload,
+            month: selectedMonth,
+            year: selectedYear,
+          }),
+        });
+      } catch (fetchErr) {
+        simulated = true;
+      }
+
+      if (simulated || !response) {
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        showNotification(
+          `تمت محاكاة إرسال قسائم الرواتب بنجاح لعدد ${payload.length} موظف (وضع التشغيل التجريبي بدون خادم)`,
+          "success"
+        );
+        return;
+      }
 
       const contentType = response.headers.get("content-type");
       if (contentType && contentType.indexOf("application/json") !== -1) {
@@ -297,8 +329,10 @@ export function SalariesPage() {
           "success",
         );
       } else {
-        throw new Error(
-          "API not available. This feature requires the Node.js backend server to be running (cannot be used on pure static hosting like Netlify).",
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        showNotification(
+          `تمت محاكاة إرسال قسائم الرواتب بنجاح لعدد ${payload.length} موظف (وضع التشغيل التجريبي بدون خادم)`,
+          "success"
         );
       }
     } catch (error: any) {
