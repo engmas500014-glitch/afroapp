@@ -476,7 +476,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [isSupabaseConnected, setIsSupabaseConnected] = useState(false);
   const [syncState, setSyncState] = useState<'synced' | 'syncing' | 'error' | 'offline'>('offline');
   const [syncError, setSyncError] = useState<string | null>(null);
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => {
+    const saved = localStorage.getItem("currentUser");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  });
+
+  React.useEffect(() => {
+    if (user) {
+      localStorage.setItem("currentUser", JSON.stringify(user));
+    } else {
+      localStorage.removeItem("currentUser");
+    }
+  }, [user]);
 
   const handleSyncCall = async (syncName: string, syncFn: () => Promise<void>) => {
     if (!isLoaded || !isSupabaseConnected) return;
