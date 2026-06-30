@@ -30,6 +30,7 @@ export function EmployeesPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleteAllModalOpen, setIsDeleteAllModalOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(
     null,
   );
@@ -69,6 +70,11 @@ export function EmployeesPage() {
       setIsDeleteModalOpen(false);
       setEmployeeToDelete(null);
     }
+  };
+
+  const confirmDeleteAll = () => {
+    setEmployees([]);
+    setIsDeleteAllModalOpen(false);
   };
 
   const getNextIdNumber = () => {
@@ -238,10 +244,27 @@ export function EmployeesPage() {
         const newOrUpdatedEmployees = [...employees];
 
         results.data.forEach((row: any) => {
-          let id = row["National ID"] || row["ID"];
+          const rowHrCode = row["HR Code"] || row["hrCode"] || "";
+          const rowId = row["National ID"] || row["ID"] || row["id"] || "";
+          
+          let existingIndex = -1;
+          if (rowHrCode) {
+            existingIndex = newOrUpdatedEmployees.findIndex(e => e.hrCode === rowHrCode);
+          }
+          if (existingIndex === -1 && rowId) {
+            existingIndex = newOrUpdatedEmployees.findIndex(e => e.id === rowId);
+          }
+
+          const existingEmp = existingIndex >= 0 ? newOrUpdatedEmployees[existingIndex] : null;
+
+          let id = rowId;
           if (!id) {
-            empCount++;
-            id = `EMP-${empCount.toString().padStart(3, "0")}`;
+            if (existingEmp) {
+              id = existingEmp.id;
+            } else {
+              empCount++;
+              id = `EMP-${empCount.toString().padStart(3, "0")}`;
+            }
           } else {
              const match = id.match(/(\d+)$/);
              if (match) {
@@ -250,33 +273,41 @@ export function EmployeesPage() {
           }
           
           const generatedHrCode = `HR-${(1000 + empCount).toString()}`;
-          const hrCode = row["HR Code"] || generatedHrCode;
-          
+          const hrCode = rowHrCode || (existingEmp ? existingEmp.hrCode : generatedHrCode);
+
+          const getValue = (keys: string[], fallback: any) => {
+            for (const key of keys) {
+              if (row[key] !== undefined && row[key] !== null) {
+                return row[key];
+              }
+            }
+            return fallback;
+          };
+
           const newEmpData: Employee = {
             id,
             hrCode,
-            name: row["Name"] || "Unknown",
-            position: row["Position"] || "-",
-            account: row["Account"] || "-",
-            project: row["Project"] || "-",
-            email: row["Email"] || "",
-            phone1: row["Phone 1"] || "",
-            phone2: row["Phone 2 (Optional)"] || row["Phone 2"] || "",
-            dateHiring: row["Date Hiring"] || new Date().toISOString().split('T')[0],
-            dateResign: row["Date Resign"] || "",
-            status: (row["Status"] === "Resigned" ? "Resigned" : "Active") as "Active" | "Resigned",
-            bankAccount: row["Bank Account"] || "",
-            netSalary: Number(row["Net Salary (EGP)"] || row["Net Salary"] || 0),
-            socialInsuranceEmployee: Number(row["Social Ins. (Emp)"] || 0),
-            socialInsuranceCompany: Number(row["Social Ins. (Comp)"] || 0),
-            taxes: Number(row["Taxes"] || 0),
-            medical: Number(row["Medical Support"] || row["Medical"] || 0),
-            notes: row["Notes"] || "",
+            name: getValue(["Name", "name"], existingEmp ? existingEmp.name : "Unknown"),
+            position: getValue(["Position", "position"], existingEmp ? existingEmp.position : "-"),
+            account: getValue(["Account", "account"], existingEmp ? existingEmp.account : "-"),
+            project: getValue(["Project", "project"], existingEmp ? existingEmp.project : "-"),
+            email: getValue(["Email", "email"], existingEmp ? existingEmp.email : ""),
+            phone1: getValue(["Phone 1", "phone1"], existingEmp ? existingEmp.phone1 : ""),
+            phone2: getValue(["Phone 2 (Optional)", "Phone 2", "phone2"], existingEmp ? existingEmp.phone2 : ""),
+            dateHiring: getValue(["Date Hiring", "dateHiring"], existingEmp ? existingEmp.dateHiring : new Date().toISOString().split('T')[0]),
+            dateResign: getValue(["Date Resign", "dateResign"], existingEmp ? existingEmp.dateResign : ""),
+            status: row["Status"] !== undefined ? (row["Status"] === "Resigned" ? "Resigned" : "Active") : (existingEmp ? existingEmp.status : "Active"),
+            bankAccount: getValue(["Bank Account", "bankAccount"], existingEmp ? existingEmp.bankAccount : ""),
+            netSalary: Number(getValue(["Net Salary (EGP)", "Net Salary", "netSalary"], existingEmp ? existingEmp.netSalary : 0)),
+            socialInsuranceEmployee: Number(getValue(["Social Ins. (Emp)", "socialInsuranceEmployee"], existingEmp ? existingEmp.socialInsuranceEmployee : 0)),
+            socialInsuranceCompany: Number(getValue(["Social Ins. (Comp)", "socialInsuranceCompany"], existingEmp ? existingEmp.socialInsuranceCompany : 0)),
+            taxes: Number(getValue(["Taxes", "taxes"], existingEmp ? existingEmp.taxes : 0)),
+            medical: Number(getValue(["Medical Support", "Medical", "medical"], existingEmp ? existingEmp.medical : 0)),
+            notes: getValue(["Notes", "notes"], existingEmp ? existingEmp.notes : ""),
           };
 
-          const existingIndex = newOrUpdatedEmployees.findIndex(e => e.id === id);
           if (existingIndex >= 0) {
-            newOrUpdatedEmployees[existingIndex] = { ...newOrUpdatedEmployees[existingIndex], ...newEmpData };
+            newOrUpdatedEmployees[existingIndex] = newEmpData;
           } else {
             newOrUpdatedEmployees.push(newEmpData);
           }
@@ -384,6 +415,11 @@ export function EmployeesPage() {
           {canEdit && (
             <Button onClick={handleNewEmployeeClick}>
               <Plus className="w-4 h-4 mr-2" /> New Employee
+            </Button>
+          )}
+          {canEdit && employees.length > 0 && (
+            <Button variant="destructive" onClick={() => setIsDeleteAllModalOpen(true)}>
+              <Trash2 className="w-4 h-4 mr-2" /> Delete All
             </Button>
           )}
         </div>
@@ -1060,6 +1096,39 @@ export function EmployeesPage() {
                   onClick={confirmDelete}
                 >
                   Delete Employee
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Delete All Employees Modal Overlay */}
+      {isDeleteAllModalOpen && (
+        <div className="fixed inset-0 bg-ink/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-sm shadow-xl animate-in fade-in zoom-in duration-200">
+            <div className="p-6 text-center space-y-4">
+              <div className="w-12 h-12 rounded-full bg-danger/10 flex items-center justify-center mx-auto">
+                <Trash2 className="w-6 h-6 text-danger" />
+              </div>
+              <h3 className="font-bold text-lg text-ink">Delete All Employees</h3>
+              <p className="text-sm text-muted-fg">
+                Are you sure you want to delete all employees? This action cannot be undone.
+              </p>
+              <div className="pt-4 flex gap-3 justify-center">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsDeleteAllModalOpen(false)}
+                >
+                  إلغاء (Cancel)
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={confirmDeleteAll}
+                >
+                  تأكيد الحذف (Delete All)
                 </Button>
               </div>
             </div>
