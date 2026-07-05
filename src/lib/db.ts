@@ -219,6 +219,38 @@ export const syncDeleteRemoved = async (tableName: string, currentIds: string[])
 
 export const syncEmployees = async (data: Employee[]) => {
   const ids = data.map(e => e.id);
+
+  // Pre-delete dependent records from safety_records, escalations, and salary_records
+  // to prevent foreign key or reference constraint failures when employees are deleted.
+  try {
+    const { data: dbItems } = await supabase
+      .from('employees')
+      .select('id');
+      
+    if (dbItems) {
+      const dbIds = dbItems.map(x => x.id);
+      const idsToDelete = dbIds.filter(id => !ids.includes(id));
+      
+      if (idsToDelete.length > 0) {
+        const chunkSize = 100;
+        for (let i = 0; i < idsToDelete.length; i += chunkSize) {
+          const chunk = idsToDelete.slice(i, i + chunkSize);
+          
+          // 1. Delete dependent safety records
+          await supabase.from('safety_records').delete().in('id', chunk);
+          
+          // 2. Delete dependent escalations
+          await supabase.from('escalations').delete().in('employee_id', chunk);
+          
+          // 3. Delete dependent salary records
+          await supabase.from('salary_records').delete().in('id', chunk);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("Pre-deletion of related records failed, carrying on with standard delete:", err);
+  }
+
   await syncDeleteRemoved('employees', ids);
 
   if (data.length > 0) {

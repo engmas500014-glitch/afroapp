@@ -27,8 +27,16 @@ import {
 } from "lucide-react";
 
 export function EmployeesPage() {
-  const { employees, setEmployees, user, positions, visibleAccounts: accounts, permissions } =
-    useAppContext();
+  const { 
+    employees, 
+    setEmployees, 
+    user, 
+    positions, 
+    visibleAccounts: accounts, 
+    permissions,
+    setSafetyRecords,
+    setSalaryOverrides
+  } = useAppContext();
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -70,6 +78,19 @@ export function EmployeesPage() {
   const confirmDelete = () => {
     if (employeeToDelete) {
       setEmployees(employees.filter((e) => e.id !== employeeToDelete.id));
+      
+      // Clean up local state for safety records and salary overrides
+      setSafetyRecords((prev) => {
+        const copy = { ...prev };
+        delete copy[employeeToDelete.id];
+        return copy;
+      });
+      setSalaryOverrides((prev) => {
+        const copy = { ...prev };
+        delete copy[employeeToDelete.id];
+        return copy;
+      });
+
       setIsDeleteModalOpen(false);
       setEmployeeToDelete(null);
     }
@@ -77,6 +98,8 @@ export function EmployeesPage() {
 
   const confirmDeleteAll = () => {
     setEmployees([]);
+    setSafetyRecords({});
+    setSalaryOverrides({});
     setIsDeleteAllModalOpen(false);
   };
 
