@@ -190,7 +190,7 @@ export const syncEmployees = async (data: Employee[]) => {
     const { error: deleteError } = await supabase
       .from('employees')
       .delete()
-      .not('id', 'in', `(${ids.join(',')})`);
+      .not('id', 'in', `(${ids.map(id => `"${id}"`).join(',')})`);
     if (deleteError) {
       console.warn("Error deleting removed employees:", deleteError);
     }
@@ -274,7 +274,7 @@ export const syncAccounts = async (data: AccountItem[]) => {
     const { error: deleteError } = await supabase
       .from('accounts')
       .delete()
-      .not('id', 'in', `(${ids.join(',')})`);
+      .not('id', 'in', `(${ids.map(id => `"${id}"`).join(',')})`);
     if (deleteError) console.warn("Error deleting removed accounts:", deleteError);
   } else {
     const { error: deleteError } = await supabase
@@ -299,7 +299,7 @@ export const syncPoBudgets = async (data: POBudget[]) => {
     const { error: deleteError } = await supabase
       .from('po_budgets')
       .delete()
-      .not('id', 'in', `(${ids.join(',')})`);
+      .not('id', 'in', `(${ids.map(id => `"${id}"`).join(',')})`);
     if (deleteError) console.warn("Error deleting removed po_budgets:", deleteError);
   } else {
     const { error: deleteError } = await supabase
@@ -373,7 +373,7 @@ export const syncEscalations = async (data: Escalation[]) => {
     const { error: deleteError } = await supabase
       .from('escalations')
       .delete()
-      .not('id', 'in', `(${ids.join(',')})`);
+      .not('id', 'in', `(${ids.map(id => `"${id}"`).join(',')})`);
     if (deleteError) console.warn("Error deleting removed escalations:", deleteError);
   } else {
     const { error: deleteError } = await supabase
@@ -415,7 +415,7 @@ export const syncPoAcceptances = async (data: POAcceptance[]) => {
     const { error: deleteError } = await supabase
       .from('po_acceptances')
       .delete()
-      .not('id', 'in', `(${ids.join(',')})`);
+      .not('id', 'in', `(${ids.map(id => `"${id}"`).join(',')})`);
     if (deleteError) console.warn("Error deleting removed po_acceptances:", deleteError);
   } else {
     const { error: deleteError } = await supabase
@@ -475,7 +475,7 @@ export const syncUsers = async (data: User[]) => {
     const { error: deleteError } = await supabase
       .from('users')
       .delete()
-      .not('id', 'in', `(${ids.join(',')})`);
+      .not('id', 'in', `(${ids.map(id => `"${id}"`).join(',')})`);
     if (deleteError) console.warn("Error deleting removed users:", deleteError);
   } else {
     const { error: deleteError } = await supabase

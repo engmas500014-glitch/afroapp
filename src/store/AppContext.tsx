@@ -775,25 +775,50 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [safetyRecords, isLoaded, isSupabaseConnected]);
 
-  const [positions, setPositions] = useState<string[]>([
-    "Software Engineer",
-    "HR Specialist",
-    "Project Manager",
-    "Sales Representative",
-    "Team Lead",
-    "Accountant",
-  ]);
+  const [positions, setPositions] = useState<string[]>(() => {
+    const saved = localStorage.getItem("positions");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.warn("Failed to parse positions from localStorage", e);
+      }
+    }
+    return [
+      "Software Engineer",
+      "HR Specialist",
+      "Project Manager",
+      "Sales Representative",
+      "Team Lead",
+      "Accountant",
+    ];
+  });
 
-  const [accounts, setAccounts] = useState<AccountItem[]>([
-    { id: "acc-1", name: "NBE", projects: ["NBE Main"] },
-    { id: "acc-2", name: "CIB", projects: ["CIB Retail", "CIB Corporate"] },
-    { id: "acc-3", name: "Banque Misr", projects: ["BM Portal"] },
-    { id: "acc-4", name: "Internal", projects: ["HR System", "IT Support"] },
-    { id: "acc-5", name: "QNB", projects: [] },
-    { id: "acc-6", name: "Project NOC", projects: ["NOC Phase 1"] },
-  ]);
+  const [accounts, setAccounts] = useState<AccountItem[]>(() => {
+    const saved = localStorage.getItem("accounts");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.warn("Failed to parse accounts from localStorage", e);
+      }
+    }
+    return [
+      { id: "acc-1", name: "NBE", projects: ["NBE Main"] },
+      { id: "acc-2", name: "CIB", projects: ["CIB Retail", "CIB Corporate"] },
+      { id: "acc-3", name: "Banque Misr", projects: ["BM Portal"] },
+      { id: "acc-4", name: "Internal", projects: ["HR System", "IT Support"] },
+      { id: "acc-5", name: "QNB", projects: [] },
+      { id: "acc-6", name: "Project NOC", projects: ["NOC Phase 1"] },
+    ];
+  });
+
+  React.useEffect(() => {
+    localStorage.setItem("positions", JSON.stringify(positions));
+  }, [positions]);
   
   React.useEffect(() => {
+    localStorage.setItem("accounts", JSON.stringify(accounts));
     if (isLoaded && isSupabaseConnected) {
       handleSyncCall("Accounts", () => syncAccounts(accounts));
     }
