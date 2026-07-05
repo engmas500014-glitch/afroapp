@@ -35,7 +35,8 @@ export function EmployeesPage() {
     visibleAccounts: accounts, 
     permissions,
     setSafetyRecords,
-    setSalaryOverrides
+    setSalaryOverrides,
+    setEscalations
   } = useAppContext();
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -79,7 +80,7 @@ export function EmployeesPage() {
     if (employeeToDelete) {
       setEmployees(employees.filter((e) => e.id !== employeeToDelete.id));
       
-      // Clean up local state for safety records and salary overrides
+      // Clean up local state for safety records, salary overrides, and escalations
       setSafetyRecords((prev) => {
         const copy = { ...prev };
         delete copy[employeeToDelete.id];
@@ -94,6 +95,7 @@ export function EmployeesPage() {
         });
         return copy;
       });
+      setEscalations((prev) => prev.filter((esc) => esc.employeeId !== employeeToDelete.id));
 
       setIsDeleteModalOpen(false);
       setEmployeeToDelete(null);
@@ -104,6 +106,7 @@ export function EmployeesPage() {
     setEmployees([]);
     setSafetyRecords({});
     setSalaryOverrides({});
+    setEscalations([]);
     setIsDeleteAllModalOpen(false);
   };
 
