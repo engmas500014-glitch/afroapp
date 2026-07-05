@@ -184,25 +184,41 @@ export const loadDataFromSupabase = async () => {
   };
 };
 
-export const syncEmployees = async (data: Employee[]) => {
-  const ids = data.map(e => e.id);
-  if (ids.length > 0) {
-    const { error: deleteError } = await supabase
-      .from('employees')
-      .delete()
-      .not('id', 'in', `(${ids.map(id => `"${id}"`).join(',')})`);
-    if (deleteError) {
-      console.warn("Error deleting removed employees:", deleteError);
-    }
-  } else {
-    const { error: deleteError } = await supabase
-      .from('employees')
-      .delete()
-      .neq('id', '_dummy_id_');
-    if (deleteError) {
-      console.warn("Error clearing employees:", deleteError);
+export const syncDeleteRemoved = async (tableName: string, currentIds: string[]) => {
+  const { data: dbItems, error: fetchError } = await supabase
+    .from(tableName)
+    .select('id');
+    
+  if (fetchError) {
+    console.warn(`Error fetching ${tableName} for sync delete:`, fetchError);
+    return;
+  }
+  
+  if (!dbItems) return;
+  const dbIds = dbItems.map(x => x.id);
+  
+  // Find IDs that are in the database but not in the current state
+  const idsToDelete = dbIds.filter(id => !currentIds.includes(id));
+  
+  if (idsToDelete.length > 0) {
+    // Delete in chunks of 100 to avoid any URL length limitations
+    const chunkSize = 100;
+    for (let i = 0; i < idsToDelete.length; i += chunkSize) {
+      const chunk = idsToDelete.slice(i, i + chunkSize);
+      const { error: deleteError } = await supabase
+        .from(tableName)
+        .delete()
+        .in('id', chunk);
+      if (deleteError) {
+        console.warn(`Error deleting removed records from ${tableName}:`, deleteError);
+      }
     }
   }
+};
+
+export const syncEmployees = async (data: Employee[]) => {
+  const ids = data.map(e => e.id);
+  await syncDeleteRemoved('employees', ids);
 
   if (data.length > 0) {
     const mapped = data.map(e => ({
@@ -270,19 +286,7 @@ export const syncSafetyRecords = async (data: Record<string, SafetyRecord>) => {
 
 export const syncAccounts = async (data: AccountItem[]) => {
   const ids = data.map(x => x.id);
-  if (ids.length > 0) {
-    const { error: deleteError } = await supabase
-      .from('accounts')
-      .delete()
-      .not('id', 'in', `(${ids.map(id => `"${id}"`).join(',')})`);
-    if (deleteError) console.warn("Error deleting removed accounts:", deleteError);
-  } else {
-    const { error: deleteError } = await supabase
-      .from('accounts')
-      .delete()
-      .neq('id', '_dummy_id_');
-    if (deleteError) console.warn("Error clearing accounts:", deleteError);
-  }
+  await syncDeleteRemoved('accounts', ids);
 
   if (data.length > 0) {
     const { error } = await supabase.from('accounts').upsert(data);
@@ -295,19 +299,7 @@ export const syncAccounts = async (data: AccountItem[]) => {
 
 export const syncPoBudgets = async (data: POBudget[]) => {
   const ids = data.map(b => b.id);
-  if (ids.length > 0) {
-    const { error: deleteError } = await supabase
-      .from('po_budgets')
-      .delete()
-      .not('id', 'in', `(${ids.map(id => `"${id}"`).join(',')})`);
-    if (deleteError) console.warn("Error deleting removed po_budgets:", deleteError);
-  } else {
-    const { error: deleteError } = await supabase
-      .from('po_budgets')
-      .delete()
-      .neq('id', '_dummy_id_');
-    if (deleteError) console.warn("Error clearing po_budgets:", deleteError);
-  }
+  await syncDeleteRemoved('po_budgets', ids);
 
   if (data.length > 0) {
     const mapped = data.map(b => ({
@@ -369,19 +361,7 @@ export const syncSalaryOverrides = async (data: Record<string, SalaryRecord>) =>
 
 export const syncEscalations = async (data: Escalation[]) => {
   const ids = data.map(e => e.id);
-  if (ids.length > 0) {
-    const { error: deleteError } = await supabase
-      .from('escalations')
-      .delete()
-      .not('id', 'in', `(${ids.map(id => `"${id}"`).join(',')})`);
-    if (deleteError) console.warn("Error deleting removed escalations:", deleteError);
-  } else {
-    const { error: deleteError } = await supabase
-      .from('escalations')
-      .delete()
-      .neq('id', '_dummy_id_');
-    if (deleteError) console.warn("Error clearing escalations:", deleteError);
-  }
+  await syncDeleteRemoved('escalations', ids);
 
   if (data.length > 0) {
     const mapped = data.map(e => ({
@@ -411,19 +391,7 @@ export const syncPermissions = async (data: PermissionNode[]) => {
 
 export const syncPoAcceptances = async (data: POAcceptance[]) => {
   const ids = data.map(a => a.id);
-  if (ids.length > 0) {
-    const { error: deleteError } = await supabase
-      .from('po_acceptances')
-      .delete()
-      .not('id', 'in', `(${ids.map(id => `"${id}"`).join(',')})`);
-    if (deleteError) console.warn("Error deleting removed po_acceptances:", deleteError);
-  } else {
-    const { error: deleteError } = await supabase
-      .from('po_acceptances')
-      .delete()
-      .neq('id', '_dummy_id_');
-    if (deleteError) console.warn("Error clearing po_acceptances:", deleteError);
-  }
+  await syncDeleteRemoved('po_acceptances', ids);
 
   if (data.length > 0) {
     const mapped = data.map(a => ({
@@ -471,19 +439,7 @@ export const syncFinConfig = async (data: Record<string, ProjectConfig>) => {
 
 export const syncUsers = async (data: User[]) => {
   const ids = data.map(u => u.id);
-  if (ids.length > 0) {
-    const { error: deleteError } = await supabase
-      .from('users')
-      .delete()
-      .not('id', 'in', `(${ids.map(id => `"${id}"`).join(',')})`);
-    if (deleteError) console.warn("Error deleting removed users:", deleteError);
-  } else {
-    const { error: deleteError } = await supabase
-      .from('users')
-      .delete()
-      .neq('id', '_dummy_id_');
-    if (deleteError) console.warn("Error clearing users:", deleteError);
-  }
+  await syncDeleteRemoved('users', ids);
 
   if (data.length > 0) {
     const { error } = await supabase.from('users').upsert(data);
