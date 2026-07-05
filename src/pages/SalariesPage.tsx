@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 
 import { parseFlexibleDate } from "../lib/utils";
+import { getEmailServerUrl } from "../lib/emailServer";
 
 export function SalariesPage() {
   const {
@@ -191,7 +192,7 @@ export function SalariesPage() {
       let response;
       let simulated = false;
       try {
-        response = await fetch("/api/send-payslip", {
+        response = await fetch(`${getEmailServerUrl()}/api/send-payslip`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -214,30 +215,27 @@ export function SalariesPage() {
         simulated = true;
       }
 
-      if (simulated || !response) {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        showNotification(
-          `تمت محاكاة إرسال قسيمة الراتب بنجاح إلى ${emp.name} (وضع التشغيل التجريبي بدون خادم)`,
-          "success"
+      const contentType = response ? response.headers.get("content-type") : null;
+      if (simulated || !response || !contentType || contentType.indexOf("application/json") === -1) {
+        // No email server answered — do NOT pretend the payslip was sent.
+        throw new Error(
+          getEmailServerUrl()
+            ? `تعذر الوصول لسيرفر الإيميلات (${getEmailServerUrl()}). تأكد أنه شغال ثم أعد المحاولة.`
+            : "لم يتم الإرسال: سيرفر الإيميلات غير مضبوط. أدخل عنوانه في System Settings → Email Server."
         );
-        return;
       }
 
-      const contentType = response.headers.get("content-type");
-      if (contentType && contentType.indexOf("application/json") !== -1) {
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "Failed to send");
-        showNotification(
-          data.message || `Payslip sent to ${emp.name}`,
-          "success",
-        );
-      } else {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        showNotification(
-          `تمت محاكاة إرسال قسيمة الراتب بنجاح إلى ${emp.name} (وضع التشغيل التجريبي بدون خادم)`,
-          "success"
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Failed to send");
+      if (data.simulated) {
+        throw new Error(
+          "لم يتم إرسال حقيقي: إعدادات SMTP غير مضبوطة على سيرفر الإيميلات (راجع ملف .env).",
         );
       }
+      showNotification(
+        data.message || `Payslip sent to ${emp.name}`,
+        "success",
+      );
     } catch (error: any) {
       showNotification(error.message, "error");
     } finally {
@@ -298,7 +296,7 @@ export function SalariesPage() {
       let response;
       let simulated = false;
       try {
-        response = await fetch("/api/send-all-payslips", {
+        response = await fetch(`${getEmailServerUrl()}/api/send-all-payslips`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -311,30 +309,27 @@ export function SalariesPage() {
         simulated = true;
       }
 
-      if (simulated || !response) {
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-        showNotification(
-          `تمت محاكاة إرسال قسائم الرواتب بنجاح لعدد ${payload.length} موظف (وضع التشغيل التجريبي بدون خادم)`,
-          "success"
+      const contentType = response ? response.headers.get("content-type") : null;
+      if (simulated || !response || !contentType || contentType.indexOf("application/json") === -1) {
+        // No email server answered — do NOT pretend the payslips were sent.
+        throw new Error(
+          getEmailServerUrl()
+            ? `تعذر الوصول لسيرفر الإيميلات (${getEmailServerUrl()}). تأكد أنه شغال ثم أعد المحاولة.`
+            : "لم يتم الإرسال: سيرفر الإيميلات غير مضبوط. أدخل عنوانه في System Settings → Email Server."
         );
-        return;
       }
 
-      const contentType = response.headers.get("content-type");
-      if (contentType && contentType.indexOf("application/json") !== -1) {
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "Failed to send all");
-        showNotification(
-          data.message || `Sent ${data.successCount} payslips`,
-          "success",
-        );
-      } else {
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-        showNotification(
-          `تمت محاكاة إرسال قسائم الرواتب بنجاح لعدد ${payload.length} موظف (وضع التشغيل التجريبي بدون خادم)`,
-          "success"
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Failed to send all");
+      if (data.simulated) {
+        throw new Error(
+          "لم يتم إرسال حقيقي: إعدادات SMTP غير مضبوطة على سيرفر الإيميلات (راجع ملف .env).",
         );
       }
+      showNotification(
+        data.message || `Sent ${data.successCount} payslips`,
+        "success",
+      );
     } catch (error: any) {
       showNotification(error.message, "error");
     } finally {

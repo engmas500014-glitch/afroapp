@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 
 import { parseFlexibleDate } from "../lib/utils";
+import { getEmailServerUrl } from "../lib/emailServer";
 
 export function OtherCostPage() {
   const {
@@ -195,7 +196,7 @@ export function OtherCostPage() {
       let response;
       let simulated = false;
       try {
-        response = await fetch("/api/send-payslip", {
+        response = await fetch(`${getEmailServerUrl()}/api/send-payslip`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -306,7 +307,7 @@ export function OtherCostPage() {
       let response;
       let simulated = false;
       try {
-        response = await fetch("/api/send-all-payslips", {
+        response = await fetch(`${getEmailServerUrl()}/api/send-all-payslips`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

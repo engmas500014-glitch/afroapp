@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
@@ -9,6 +10,27 @@ async function startServer() {
 
   // Middleware to parse JSON bodies
   app.use(express.json());
+
+  // CORS: the production frontend is hosted on a different origin (afroapp.site)
+  // and reaches this server through its public/tunnel URL.
+  app.use('/api', (req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, ngrok-skip-browser-warning');
+    if (req.method === 'OPTIONS') {
+      res.sendStatus(204);
+      return;
+    }
+    next();
+  });
+
+  const isSmtpConfigured = () =>
+    Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_USER !== 'my_smtp_user');
+
+  // Health check used by the Settings page to verify the server URL
+  app.get('/api/health', (_req, res) => {
+    res.json({ ok: true, smtpConfigured: isSmtpConfigured() });
+  });
 
   // Set up Nodemailer transporter using environment variables
   // The user needs to supply these in their .env file.
@@ -89,7 +111,7 @@ async function startServer() {
       };
 
       // Only attempt to send if SMTP setup is likely present, else simulate.
-      if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_USER !== 'my_smtp_user') {
+      if (isSmtpConfigured()) {
         await transporter.sendMail(mailOptions);
         res.json({ message: 'Payslip sent successfully' });
       } else {
@@ -129,7 +151,7 @@ async function startServer() {
     let authError = '';
 
     try {
-      if (!process.env.SMTP_HOST || !process.env.SMTP_USER || process.env.SMTP_USER === 'my_smtp_user') {
+      if (!isSmtpConfigured()) {
          console.warn('SMTP credentials not configured or using dummy values in .env. Simulating batch email send.');
          await new Promise((resolve) => setTimeout(resolve, 1500));
          res.json({ 

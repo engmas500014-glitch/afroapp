@@ -22,6 +22,7 @@ import {
   Save,
   Check,
 } from "lucide-react";
+import { getEmailServerUrl, setEmailServerUrl, checkEmailServerHealth } from "../lib/emailServer";
 
 export function SettingsPage() {
   const {
@@ -55,6 +56,12 @@ export function SettingsPage() {
   const [localUrl, setLocalUrl] = useState(() => localStorage.getItem("custom_supabase_url") || "");
   const [localKey, setLocalKey] = useState(() => localStorage.getItem("custom_supabase_anon_key") || "");
   const [isSavedCreds, setIsSavedCreds] = useState(false);
+
+  // Local states for the payslip email server settings
+  const [emailServerInput, setEmailServerInput] = useState(() => getEmailServerUrl());
+  const [emailServerSaved, setEmailServerSaved] = useState(false);
+  const [emailTestResult, setEmailTestResult] = useState<{ success: boolean; msg: string } | null>(null);
+  const [isTestingEmail, setIsTestingEmail] = useState(false);
   const allProjects = Array.from(new Set(accounts.flatMap(acc => acc.projects)));
   const [newPosition, setNewPosition] = useState("");
   const [newAccount, setNewAccount] = useState("");
@@ -469,6 +476,88 @@ export function SettingsPage() {
                 : "bg-slate-100 dark:bg-slate-800 border-border text-ink"
             )}>
               <strong>Sync Status:</strong> {syncError || syncStatus}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Email Server (Payslips) Settings */}
+      <Card>
+        <CardHeader className="border-b border-border bg-muted/50">
+          <CardTitle>Email Server (Payslips)</CardTitle>
+        </CardHeader>
+        <CardContent className="p-6 space-y-4">
+          <p className="text-xs text-muted-fg">
+            Payslip emails are sent through the app's email server (server.ts with SMTP credentials).
+            The hosted site has no backend, so enter the public URL where the email server is running
+            (e.g. an ngrok tunnel to the machine running <code className="font-mono">npm run dev</code>).
+            Leave empty to use the same origin (local development).
+          </p>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-ink">Email Server URL</label>
+            <Input
+              placeholder="https://your-tunnel-url.ngrok-free.dev"
+              value={emailServerInput}
+              onChange={(e) => {
+                setEmailServerInput(e.target.value);
+                setEmailServerSaved(false);
+              }}
+              className="font-mono text-xs"
+              disabled={!canEdit}
+            />
+          </div>
+          <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-border/50">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isTestingEmail}
+              onClick={async () => {
+                setIsTestingEmail(true);
+                setEmailTestResult(null);
+                const previous = getEmailServerUrl();
+                try {
+                  // Test the URL currently in the input (without persisting yet)
+                  setEmailServerUrl(emailServerInput);
+                  const health = await checkEmailServerHealth();
+                  setEmailTestResult({
+                    success: true,
+                    msg: health.smtpConfigured
+                      ? "Email server reachable and SMTP is configured — real emails will be sent."
+                      : "Email server reachable, but SMTP credentials are NOT configured on it (emails will be simulated). Set SMTP_* variables in its .env file.",
+                  });
+                } catch (err: any) {
+                  setEmailTestResult({
+                    success: false,
+                    msg: `Could not reach the email server: ${err.message || err}`,
+                  });
+                } finally {
+                  setEmailServerUrl(previous);
+                  setIsTestingEmail(false);
+                }
+              }}
+            >
+              {isTestingEmail ? "Testing..." : "Test Email Server"}
+            </Button>
+            <Button
+              size="sm"
+              disabled={!canEdit || emailServerSaved}
+              onClick={() => {
+                setEmailServerUrl(emailServerInput);
+                setEmailServerInput(getEmailServerUrl());
+                setEmailServerSaved(true);
+              }}
+            >
+              {emailServerSaved ? "Saved!" : "Save Email Server URL"}
+            </Button>
+          </div>
+          {emailTestResult && (
+            <div className={cn(
+              "p-3.5 rounded-lg text-xs font-mono border",
+              emailTestResult.success
+                ? "bg-green-500/10 text-green-500 border-green-500/20"
+                : "bg-red-500/10 text-red-500 border-red-500/20"
+            )}>
+              <span className="font-bold uppercase tracking-wider">{emailTestResult.success ? "Success:" : "Error:"}</span> {emailTestResult.msg}
             </div>
           )}
         </CardContent>
