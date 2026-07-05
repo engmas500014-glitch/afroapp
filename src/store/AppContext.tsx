@@ -570,6 +570,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  // Refreshing or closing the tab while a sync is in flight cancels the pending
+  // requests, leaving the database out of sync with what the user saw locally
+  // (e.g. Delete All appears to work, then the data comes back after refresh).
+  React.useEffect(() => {
+    const warnOnUnload = (e: BeforeUnloadEvent) => {
+      if (syncState === "syncing") {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", warnOnUnload);
+    return () => window.removeEventListener("beforeunload", warnOnUnload);
+  }, [syncState]);
+
   const [theme, setTheme] = useState<Theme>(() => {
     const saved = localStorage.getItem("theme");
     if (saved === "dark" || saved === "light") return saved;

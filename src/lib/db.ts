@@ -184,37 +184,54 @@ export const loadDataFromSupabase = async () => {
   };
 };
 
-export const syncDeleteRemoved = async (tableName: string, currentIds: string[]) => {
-  const { data: dbItems, error: fetchError } = await supabase
-    .from(tableName)
-    .select('id');
-    
-  if (fetchError) {
-    console.warn(`Error fetching ${tableName} for sync delete:`, fetchError);
-    throw new Error(`Error fetching ${tableName} for sync delete: ${fetchError.message}`);
+// Fetch every id in a table, paginating past the PostgREST max-rows cap (usually 1000)
+const fetchAllIds = async (tableName: string): Promise<string[]> => {
+  const pageSize = 1000;
+  const ids: string[] = [];
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await supabase
+      .from(tableName)
+      .select('id')
+      .range(from, from + pageSize - 1);
+    if (error) {
+      console.warn(`Error fetching ${tableName} ids:`, error);
+      throw new Error(`Error fetching ${tableName} ids: ${error.message}`);
+    }
+    if (!data || data.length === 0) break;
+    ids.push(...data.map(x => x.id));
+    if (data.length < pageSize) break;
   }
-  
-  if (!dbItems) return;
-  const dbIds = dbItems.map(x => x.id);
-  
-  // Find IDs that are in the database but not in the current state
-  const idsToDelete = dbIds.filter(id => !currentIds.includes(id));
-  
-  if (idsToDelete.length > 0) {
-    // Delete in chunks of 100 to avoid any URL length limitations
-    const chunkSize = 100;
-    for (let i = 0; i < idsToDelete.length; i += chunkSize) {
-      const chunk = idsToDelete.slice(i, i + chunkSize);
-      const { error: deleteError } = await supabase
-        .from(tableName)
-        .delete()
-        .in('id', chunk);
-      if (deleteError) {
-        console.warn(`Error deleting removed records from ${tableName}:`, deleteError);
-        throw new Error(`Error deleting removed records from ${tableName}: ${deleteError.message}`);
+  return ids;
+};
+
+// Delete rows matching the given column values, in chunks of 100 to avoid URL length limits
+const deleteWhereIn = async (
+  tableName: string,
+  column: string,
+  values: string[],
+  warnOnly = false,
+) => {
+  const chunkSize = 100;
+  for (let i = 0; i < values.length; i += chunkSize) {
+    const chunk = values.slice(i, i + chunkSize);
+    const { error } = await supabase.from(tableName).delete().in(column, chunk);
+    if (error) {
+      console.warn(`Error deleting removed records from ${tableName}:`, error);
+      if (!warnOnly) {
+        throw new Error(`Error deleting removed records from ${tableName}: ${error.message}`);
       }
     }
   }
+};
+
+export const syncDeleteRemoved = async (tableName: string, currentIds: string[]) => {
+  const dbIds = await fetchAllIds(tableName);
+
+  // Find IDs that are in the database but not in the current state
+  const keep = new Set(currentIds);
+  const idsToDelete = dbIds.filter(id => !keep.has(id));
+
+  await deleteWhereIn(tableName, 'id', idsToDelete);
 };
 
 export const syncEmployees = async (data: Employee[]) => {
@@ -223,29 +240,26 @@ export const syncEmployees = async (data: Employee[]) => {
   // Pre-delete dependent records from safety_records, escalations, and salary_records
   // to prevent foreign key or reference constraint failures when employees are deleted.
   try {
-    const { data: dbItems } = await supabase
-      .from('employees')
-      .select('id');
-      
-    if (dbItems) {
-      const dbIds = dbItems.map(x => x.id);
-      const idsToDelete = dbIds.filter(id => !ids.includes(id));
-      
-      if (idsToDelete.length > 0) {
-        // 1. Delete dependent safety records
-        const { error: errSafety } = await supabase.from('safety_records').delete().in('id', idsToDelete);
-        if (errSafety) console.warn("Failed to delete related safety_records:", errSafety);
-        
-        // 2. Delete dependent escalations
-        const { error: errEsc } = await supabase.from('escalations').delete().in('employee_id', idsToDelete);
-        if (errEsc) console.warn("Failed to delete related escalations:", errEsc);
-        
-        // 3. Delete dependent salary records (whose keys start with the employee ID)
-        for (const empId of idsToDelete) {
-          const { error: errSalary } = await supabase.from('salary_records').delete().ilike('id', `${empId}_%`);
-          if (errSalary) console.warn(`Failed to delete related salary_records for ${empId}:`, errSalary);
-        }
-      }
+    const dbIds = await fetchAllIds('employees');
+    const keep = new Set(ids);
+    const idsToDelete = dbIds.filter(id => !keep.has(id));
+
+    if (idsToDelete.length > 0) {
+      // 1. Delete dependent safety records
+      await deleteWhereIn('safety_records', 'id', idsToDelete, true);
+
+      // 2. Delete dependent escalations
+      await deleteWhereIn('escalations', 'employee_id', idsToDelete, true);
+
+      // 3. Delete dependent salary records (whose keys start with the employee ID).
+      // Fetch all salary ids once and delete the matches in chunks, instead of
+      // issuing one request per employee — bulk deletes used to fire hundreds of
+      // sequential requests and never finished before the user closed the page.
+      const salaryIds = await fetchAllIds('salary_records');
+      const salaryIdsToDelete = salaryIds.filter(sid =>
+        idsToDelete.some(empId => sid.startsWith(`${empId}_`))
+      );
+      await deleteWhereIn('salary_records', 'id', salaryIdsToDelete, true);
     }
   } catch (err) {
     console.warn("Pre-deletion of related records failed, carrying on with standard delete:", err);
