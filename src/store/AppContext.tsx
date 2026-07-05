@@ -489,6 +489,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const [syncState, setSyncState] = useState<'synced' | 'syncing' | 'error' | 'offline'>('offline');
   const [syncError, setSyncError] = useState<string | null>(null);
+  const syncQueueRef = React.useRef<Promise<any>>(Promise.resolve());
   
   const [supabaseEnabled, setSupabaseEnabledState] = useState<boolean>(() => {
     const saved = localStorage.getItem("supabase_enabled");
@@ -525,30 +526,37 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [user]);
 
-  const handleSyncCall = async (syncName: string, syncFn: () => Promise<void>) => {
+  const handleSyncCall = (syncName: string, syncFn: () => Promise<void>) => {
     if (!isLoaded || !isSupabaseConnected) return;
-    setSyncState('syncing');
-    try {
-      await syncFn();
-      setSyncState('synced');
-      setSyncError(null);
-    } catch (err: any) {
-      console.error(`Sync error in ${syncName}:`, err);
-      const errMsg = err.message || String(err);
-      if (
-        errMsg.includes("Failed to fetch") || 
-        errMsg.includes("NetworkError") || 
-        errMsg.includes("fetch failed") || 
-        errMsg.includes("Failed to connect")
-      ) {
-        setIsSupabaseConnected(false);
-        setSyncState('offline');
-        setSyncError(`Database connection lost. Changes are saved locally.`);
-      } else {
-        setSyncState('error');
-        setSyncError(`${syncName} synchronization failed: ${errMsg}`);
+    
+    // Add the sync call to the sequential queue chain to prevent database deadlocks and race conditions
+    syncQueueRef.current = syncQueueRef.current.then(async () => {
+      // Re-verify that connection is active and loaded
+      if (!isLoadedRef.current || !isSupabaseConnectedRef.current) return;
+      
+      setSyncState('syncing');
+      try {
+        await syncFn();
+        setSyncState('synced');
+        setSyncError(null);
+      } catch (err: any) {
+        console.error(`Sync error in ${syncName}:`, err);
+        const errMsg = err.message || String(err);
+        if (
+          errMsg.includes("Failed to fetch") || 
+          errMsg.includes("NetworkError") || 
+          errMsg.includes("fetch failed") || 
+          errMsg.includes("Failed to connect")
+        ) {
+          setIsSupabaseConnected(false);
+          setSyncState('offline');
+          setSyncError(`Database connection lost. Changes are saved locally.`);
+        } else {
+          setSyncState('error');
+          setSyncError(`${syncName} synchronization failed: ${errMsg}`);
+        }
       }
-    }
+    });
   };
 
   const [theme, setTheme] = useState<Theme>(() => {
