@@ -493,7 +493,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
   
   const [supabaseEnabled, setSupabaseEnabledState] = useState<boolean>(() => {
     const saved = localStorage.getItem("supabase_enabled");
-    return saved !== "false";
+    if (saved !== null) {
+      return saved !== "false";
+    }
+    // Default to Local Mode in production if no real production DB is configured (ngrok/localhost)
+    const isProd = process.env.NODE_ENV === 'production';
+    const defaultUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const isDefaultNgrok = !defaultUrl || defaultUrl.includes('ngrok-free.dev') || defaultUrl.includes('localhost');
+    
+    if (isProd && isDefaultNgrok) {
+      return false;
+    }
+    return true;
   });
 
   const setSupabaseEnabled = (enabled: boolean) => {
