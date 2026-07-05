@@ -191,7 +191,7 @@ export const syncDeleteRemoved = async (tableName: string, currentIds: string[])
     
   if (fetchError) {
     console.warn(`Error fetching ${tableName} for sync delete:`, fetchError);
-    return;
+    throw new Error(`Error fetching ${tableName} for sync delete: ${fetchError.message}`);
   }
   
   if (!dbItems) return;
@@ -211,6 +211,7 @@ export const syncDeleteRemoved = async (tableName: string, currentIds: string[])
         .in('id', chunk);
       if (deleteError) {
         console.warn(`Error deleting removed records from ${tableName}:`, deleteError);
+        throw new Error(`Error deleting removed records from ${tableName}: ${deleteError.message}`);
       }
     }
   }
@@ -281,7 +282,10 @@ export const syncSafetyRecords = async (data: Record<string, SafetyRecord>) => {
     };
   });
   const { error } = await supabase.from('safety_records').upsert(mapped);
-  if (error) console.warn("Error syncing safety_records:", error);
+  if (error) {
+    console.warn("Error syncing safety_records:", error);
+    throw new Error(`Error syncing safety records: ${error.message}`);
+  }
 };
 
 export const syncAccounts = async (data: AccountItem[]) => {
@@ -356,7 +360,10 @@ export const syncSalaryOverrides = async (data: Record<string, SalaryRecord>) =>
     };
   });
   const { error } = await supabase.from('salary_records').upsert(mapped);
-  if (error) console.warn("Error syncing salary_records:", error);
+  if (error) {
+    console.warn("Error syncing salary_records:", error);
+    throw new Error(`Error syncing salary records: ${error.message}`);
+  }
 };
 
 export const syncEscalations = async (data: Escalation[]) => {
@@ -386,7 +393,10 @@ export const syncEscalations = async (data: Escalation[]) => {
 export const syncPermissions = async (data: PermissionNode[]) => {
   if (!data.length) return;
   const { error } = await supabase.from('permissions').upsert(data);
-  if (error) console.warn("Error syncing permissions:", error);
+  if (error) {
+    console.warn("Error syncing permissions:", error);
+    throw new Error(`Error syncing permissions: ${error.message}`);
+  }
 };
 
 export const syncPoAcceptances = async (data: POAcceptance[]) => {
@@ -434,7 +444,10 @@ export const syncFinConfig = async (data: Record<string, ProjectConfig>) => {
     };
   });
   const { error } = await supabase.from('fin_config').upsert(mapped);
-  if (error) console.warn("Error syncing fin_config:", error);
+  if (error) {
+    console.warn("Error syncing fin_config:", error);
+    throw new Error(`Error syncing fin_config: ${error.message}`);
+  }
 };
 
 export const syncUsers = async (data: User[]) => {
