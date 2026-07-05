@@ -474,6 +474,17 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export function AppProvider({ children }: { children: ReactNode }) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isSupabaseConnected, setIsSupabaseConnected] = useState(false);
+  const isLoadedRef = React.useRef(false);
+  const isSupabaseConnectedRef = React.useRef(false);
+
+  React.useEffect(() => {
+    isLoadedRef.current = isLoaded;
+  }, [isLoaded]);
+
+  React.useEffect(() => {
+    isSupabaseConnectedRef.current = isSupabaseConnected;
+  }, [isSupabaseConnected]);
+
   const [syncState, setSyncState] = useState<'synced' | 'syncing' | 'error' | 'offline'>('offline');
   const [syncError, setSyncError] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(() => {
@@ -577,10 +588,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   React.useEffect(() => {
     localStorage.setItem("finConfig", JSON.stringify(finConfig));
-    if (isLoaded && isSupabaseConnected) {
+    if (isLoadedRef.current && isSupabaseConnectedRef.current) {
       handleSyncCall("Financial Config", () => syncFinConfig(finConfig));
     }
-  }, [finConfig, isLoaded, isSupabaseConnected]);
+  }, [finConfig]);
 
   // Mock Data
   const [employees, setEmployees] = useState<Employee[]>(() => {
@@ -730,31 +741,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   React.useEffect(() => {
     localStorage.setItem("employees", JSON.stringify(employees));
-    if (isLoaded && isSupabaseConnected) {
+    if (isLoadedRef.current && isSupabaseConnectedRef.current) {
       handleSyncCall("Employees", () => syncEmployees(employees));
     }
-  }, [employees, isLoaded, isSupabaseConnected]);
+  }, [employees]);
 
   React.useEffect(() => {
     localStorage.setItem("poAcceptances", JSON.stringify(poAcceptances));
-    if (isLoaded && isSupabaseConnected) {
+    if (isLoadedRef.current && isSupabaseConnectedRef.current) {
       handleSyncCall("PO Acceptances", () => syncPoAcceptances(poAcceptances));
     }
-  }, [poAcceptances, isLoaded, isSupabaseConnected]);
+  }, [poAcceptances]);
 
   React.useEffect(() => {
     localStorage.setItem("poBudgets", JSON.stringify(poBudgets));
-    if (isLoaded && isSupabaseConnected) {
+    if (isLoadedRef.current && isSupabaseConnectedRef.current) {
       handleSyncCall("PO Budgets", () => syncPoBudgets(poBudgets));
     }
-  }, [poBudgets, isLoaded, isSupabaseConnected]);
+  }, [poBudgets]);
 
   React.useEffect(() => {
     localStorage.setItem("salaryOverrides", JSON.stringify(salaryOverrides));
-    if (isLoaded && isSupabaseConnected) {
+    if (isLoadedRef.current && isSupabaseConnectedRef.current) {
       handleSyncCall("Salary Overrides", () => syncSalaryOverrides(salaryOverrides));
     }
-  }, [salaryOverrides, isLoaded, isSupabaseConnected]);
+  }, [salaryOverrides]);
   
   const [safetyRecords, setSafetyRecords] = useState<Record<string, SafetyRecord>>(() => {
     const saved = localStorage.getItem("safetyRecords");
@@ -770,10 +781,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   React.useEffect(() => {
     localStorage.setItem("safetyRecords", JSON.stringify(safetyRecords));
-    if (isLoaded && isSupabaseConnected) {
+    if (isLoadedRef.current && isSupabaseConnectedRef.current) {
       handleSyncCall("Safety Records", () => syncSafetyRecords(safetyRecords));
     }
-  }, [safetyRecords, isLoaded, isSupabaseConnected]);
+  }, [safetyRecords]);
 
   const [positions, setPositions] = useState<string[]>(() => {
     const saved = localStorage.getItem("positions");
@@ -819,10 +830,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   
   React.useEffect(() => {
     localStorage.setItem("accounts", JSON.stringify(accounts));
-    if (isLoaded && isSupabaseConnected) {
+    if (isLoadedRef.current && isSupabaseConnectedRef.current) {
       handleSyncCall("Accounts", () => syncAccounts(accounts));
     }
-  }, [accounts, isLoaded, isSupabaseConnected]);
+  }, [accounts]);
 
   const [projects, setProjects] = useState<string[]>([]);
 
@@ -867,10 +878,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   React.useEffect(() => {
     localStorage.setItem("systemUsers", JSON.stringify(systemUsers));
-    if (isLoaded && isSupabaseConnected) {
+    if (isLoadedRef.current && isSupabaseConnectedRef.current) {
       handleSyncCall("Users", () => syncUsers(systemUsers));
     }
-  }, [systemUsers, isLoaded, isSupabaseConnected]);
+  }, [systemUsers]);
 
   const [escalations, setEscalations] = useState<Escalation[]>(() => {
     const saved = localStorage.getItem("escalations");
@@ -897,10 +908,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   React.useEffect(() => {
     localStorage.setItem("escalations", JSON.stringify(escalations));
-    if (isLoaded && isSupabaseConnected) {
+    if (isLoadedRef.current && isSupabaseConnectedRef.current) {
       handleSyncCall("Escalations", () => syncEscalations(escalations));
     }
-  }, [escalations, isLoaded, isSupabaseConnected]);
+  }, [escalations]);
 
   const [permissions, setPermissions] = useState<PermissionNode[]>(() => {
     const saved = localStorage.getItem("permissions");
@@ -921,10 +932,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   React.useEffect(() => {
     localStorage.setItem("permissions", JSON.stringify(permissions));
-    if (isLoaded && isSupabaseConnected) {
+    if (isLoadedRef.current && isSupabaseConnectedRef.current) {
       handleSyncCall("Permissions", () => syncPermissions(permissions));
     }
-  }, [permissions, isLoaded, isSupabaseConnected]);
+  }, [permissions]);
 
   React.useEffect(() => {
     let mounted = true;
@@ -932,119 +943,65 @@ export function AppProvider({ children }: { children: ReactNode }) {
       try {
         const dbData = await loadDataFromSupabase();
         if (mounted) {
-          // 1. Employees: merge by id
+          // 1. Employees: load from DB (DB is source of truth)
           if (dbData.employees.length > 0) {
-            setEmployees(prev => {
-              const merged = [...dbData.employees];
-              prev.forEach(pItem => {
-                if (!dbData.employees.some(dbItem => dbItem.id === pItem.id)) {
-                  merged.push(pItem);
-                }
-              });
-              return merged;
-            });
+            setEmployees(dbData.employees);
           } else {
             syncEmployees(employees).catch(console.warn);
           }
 
-          // 2. PO Budgets: merge by id
+          // 2. PO Budgets: load from DB
           if (dbData.poBudgets.length > 0) {
-            setPoBudgets(prev => {
-              const merged = [...dbData.poBudgets];
-              prev.forEach(pItem => {
-                if (!dbData.poBudgets.some(dbItem => dbItem.id === pItem.id)) {
-                  merged.push(pItem);
-                }
-              });
-              return merged;
-            });
+            setPoBudgets(dbData.poBudgets);
           } else {
             syncPoBudgets(poBudgets).catch(console.warn);
           }
 
-          // 3. Accounts: merge by id
+          // 3. Accounts: load from DB
           if (dbData.accounts.length > 0) {
-            setAccounts(prev => {
-              const merged = [...dbData.accounts];
-              prev.forEach(pItem => {
-                if (!dbData.accounts.some(dbItem => dbItem.id === pItem.id)) {
-                  merged.push(pItem);
-                }
-              });
-              return merged;
-            });
+            setAccounts(dbData.accounts);
           } else {
             syncAccounts(accounts).catch(console.warn);
           }
 
-          // 4. Fin Config: merge by key
+          // 4. Fin Config: load from DB
           if (Object.keys(dbData.finConfig).length > 0) {
-            setFinConfig(prev => {
-              return { ...prev, ...dbData.finConfig };
-            });
+            setFinConfig(dbData.finConfig);
           } else {
             syncFinConfig(finConfig).catch(console.warn);
           }
 
-          // 5. PO Acceptances: merge by id
+          // 5. PO Acceptances: load from DB
           if (dbData.poAcceptances.length > 0) {
-            setPoAcceptances(prev => {
-              const merged = [...dbData.poAcceptances];
-              prev.forEach(pItem => {
-                if (!dbData.poAcceptances.some(dbItem => dbItem.id === pItem.id)) {
-                  merged.push(pItem);
-                }
-              });
-              return merged;
-            });
+            setPoAcceptances(dbData.poAcceptances);
           } else {
             syncPoAcceptances(poAcceptances).catch(console.warn);
           }
 
-          // 6. Salary Overrides: merge by key
+          // 6. Salary Overrides: load from DB
           if (Object.keys(dbData.salaryOverrides).length > 0) {
-            setSalaryOverrides(prev => {
-              return { ...prev, ...dbData.salaryOverrides };
-            });
+            setSalaryOverrides(dbData.salaryOverrides);
           } else {
             syncSalaryOverrides(salaryOverrides).catch(console.warn);
           }
 
-          // 7. Safety Records: merge by key
+          // 7. Safety Records: load from DB
           if (Object.keys(dbData.safetyRecords).length > 0) {
-            setSafetyRecords(prev => {
-              return { ...prev, ...dbData.safetyRecords };
-            });
+            setSafetyRecords(dbData.safetyRecords);
           } else {
             syncSafetyRecords(safetyRecords).catch(console.warn);
           }
 
-          // 8. Users: merge by id
+          // 8. Users: load from DB
           if (dbData.users && dbData.users.length > 0) {
-            setSystemUsers(prev => {
-              const merged = [...dbData.users];
-              prev.forEach(pItem => {
-                if (!dbData.users.some(dbItem => dbItem.id === pItem.id)) {
-                  merged.push(pItem);
-                }
-              });
-              return merged;
-            });
+            setSystemUsers(dbData.users);
           } else {
             syncUsers(systemUsers).catch(console.warn);
           }
 
-          // 9. Escalations: merge by id
+          // 9. Escalations: load from DB
           if (dbData.escalations.length > 0) {
-            setEscalations(prev => {
-              const merged = [...dbData.escalations];
-              prev.forEach(pItem => {
-                if (!dbData.escalations.some(dbItem => dbItem.id === pItem.id)) {
-                  merged.push(pItem);
-                }
-              });
-              return merged;
-            });
+            setEscalations(dbData.escalations);
           } else {
             syncEscalations(escalations).catch(console.warn);
           }
