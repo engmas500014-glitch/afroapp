@@ -87,7 +87,11 @@ export function EmployeesPage() {
       });
       setSalaryOverrides((prev) => {
         const copy = { ...prev };
-        delete copy[employeeToDelete.id];
+        Object.keys(copy).forEach((key) => {
+          if (key.startsWith(`${employeeToDelete.id}_`)) {
+            delete copy[key];
+          }
+        });
         return copy;
       });
 

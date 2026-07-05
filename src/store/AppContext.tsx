@@ -467,6 +467,8 @@ interface AppContextType {
   syncState: 'synced' | 'syncing' | 'error' | 'offline';
   syncError: string | null;
   triggerManualSync: () => Promise<void>;
+  supabaseEnabled: boolean;
+  setSupabaseEnabled: (enabled: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -487,6 +489,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const [syncState, setSyncState] = useState<'synced' | 'syncing' | 'error' | 'offline'>('offline');
   const [syncError, setSyncError] = useState<string | null>(null);
+  
+  const [supabaseEnabled, setSupabaseEnabledState] = useState<boolean>(() => {
+    const saved = localStorage.getItem("supabase_enabled");
+    return saved !== "false";
+  });
+
+  const setSupabaseEnabled = (enabled: boolean) => {
+    setSupabaseEnabledState(enabled);
+    localStorage.setItem("supabase_enabled", String(enabled));
+    if (!enabled) {
+      setIsSupabaseConnected(false);
+      setSyncState('offline');
+      setSyncError(null);
+    }
+  };
+
   const [user, setUser] = useState<User | null>(() => {
     const saved = localStorage.getItem("currentUser");
     if (saved) {
@@ -516,8 +534,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setSyncError(null);
     } catch (err: any) {
       console.error(`Sync error in ${syncName}:`, err);
-      setSyncState('error');
-      setSyncError(`${syncName} synchronization failed: ${err.message || err}`);
+      const errMsg = err.message || String(err);
+      if (
+        errMsg.includes("Failed to fetch") || 
+        errMsg.includes("NetworkError") || 
+        errMsg.includes("fetch failed") || 
+        errMsg.includes("Failed to connect")
+      ) {
+        setIsSupabaseConnected(false);
+        setSyncState('offline');
+        setSyncError(`Database connection lost. Changes are saved locally.`);
+      } else {
+        setSyncState('error');
+        setSyncError(`${syncName} synchronization failed: ${errMsg}`);
+      }
     }
   };
 
@@ -940,6 +970,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   React.useEffect(() => {
     let mounted = true;
     const init = async () => {
+      const isSupabaseEnabled = localStorage.getItem("supabase_enabled") !== "false";
+      if (!isSupabaseEnabled) {
+        if (mounted) {
+          setIsSupabaseConnected(false);
+          setSyncState('offline');
+          setIsLoaded(true);
+        }
+        return;
+      }
       try {
         const dbData = await loadDataFromSupabase();
         if (mounted) {
@@ -1117,6 +1156,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         syncState,
         syncError,
         triggerManualSync,
+        supabaseEnabled,
+        setSupabaseEnabled,
       }}
     >
       {children}

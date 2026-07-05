@@ -223,27 +223,36 @@ export const syncEmployees = async (data: Employee[]) => {
   // Pre-delete dependent records from safety_records, escalations, and salary_records
   // to prevent foreign key or reference constraint failures when employees are deleted.
   try {
-    const { data: dbItems } = await supabase
-      .from('employees')
-      .select('id');
-      
-    if (dbItems) {
-      const dbIds = dbItems.map(x => x.id);
-      const idsToDelete = dbIds.filter(id => !ids.includes(id));
-      
-      if (idsToDelete.length > 0) {
-        const chunkSize = 100;
-        for (let i = 0; i < idsToDelete.length; i += chunkSize) {
-          const chunk = idsToDelete.slice(i, i + chunkSize);
-          
-          // 1. Delete dependent safety records
-          await supabase.from('safety_records').delete().in('id', chunk);
-          
-          // 2. Delete dependent escalations
-          await supabase.from('escalations').delete().in('employee_id', chunk);
-          
-          // 3. Delete dependent salary records
-          await supabase.from('salary_records').delete().in('id', chunk);
+    if (ids.length === 0) {
+      // Deleting all employees. Bulk delete from related tables cleanly.
+      await supabase.from('safety_records').delete().neq('id', '');
+      await supabase.from('escalations').delete().neq('id', '');
+      await supabase.from('salary_records').delete().neq('id', '');
+    } else {
+      const { data: dbItems } = await supabase
+        .from('employees')
+        .select('id');
+        
+      if (dbItems) {
+        const dbIds = dbItems.map(x => x.id);
+        const idsToDelete = dbIds.filter(id => !ids.includes(id));
+        
+        if (idsToDelete.length > 0) {
+          const chunkSize = 100;
+          for (let i = 0; i < idsToDelete.length; i += chunkSize) {
+            const chunk = idsToDelete.slice(i, i + chunkSize);
+            
+            // 1. Delete dependent safety records
+            await supabase.from('safety_records').delete().in('id', chunk);
+            
+            // 2. Delete dependent escalations
+            await supabase.from('escalations').delete().in('employee_id', chunk);
+            
+            // 3. Delete dependent salary records (whose keys start with the employee ID)
+            for (const empId of chunk) {
+              await supabase.from('salary_records').delete().ilike('id', `${empId}_%`);
+            }
+          }
         }
       }
     }
@@ -285,38 +294,41 @@ export const syncEmployees = async (data: Employee[]) => {
 
 export const syncSafetyRecords = async (data: Record<string, SafetyRecord>) => {
   const keys = Object.keys(data);
-  if (!keys.length) return;
-  const mapped = keys.map(k => {
-    const r = data[k];
-    return {
-      id: k,
-      medical_check: r.medicalCheck || 0,
-      medical_check_start: r.medicalCheckStart || null,
-      medical_check_end: r.medicalCheckEnd || null,
-      working_at_height: r.workingAtHeight || 0,
-      working_at_height_start: r.workingAtHeightStart || null,
-      working_at_height_end: r.workingAtHeightEnd || null,
-      electricity: r.electricity || 0,
-      electricity_start: r.electricityStart || null,
-      electricity_end: r.electricityEnd || null,
-      risk_assessment: r.riskAssessment || 0,
-      risk_assessment_start: r.riskAssessmentStart || null,
-      risk_assessment_end: r.riskAssessmentEnd || null,
-      fire_fighting: r.fireFighting || 0,
-      fire_fighting_start: r.fireFightingStart || null,
-      fire_fighting_end: r.fireFightingEnd || null,
-      first_aid: r.firstAid || 0,
-      first_aid_start: r.firstAidStart || null,
-      first_aid_end: r.firstAidEnd || null,
-      ppe: r.ppe || 0,
-      ppe_start: r.ppeStart || null,
-      ppe_end: r.ppeEnd || null,
-    };
-  });
-  const { error } = await supabase.from('safety_records').upsert(mapped);
-  if (error) {
-    console.warn("Error syncing safety_records:", error);
-    throw new Error(`Error syncing safety records: ${error.message}`);
+  await syncDeleteRemoved('safety_records', keys);
+
+  if (keys.length > 0) {
+    const mapped = keys.map(k => {
+      const r = data[k];
+      return {
+        id: k,
+        medical_check: r.medicalCheck || 0,
+        medical_check_start: r.medicalCheckStart || null,
+        medical_check_end: r.medicalCheckEnd || null,
+        working_at_height: r.workingAtHeight || 0,
+        working_at_height_start: r.workingAtHeightStart || null,
+        working_at_height_end: r.workingAtHeightEnd || null,
+        electricity: r.electricity || 0,
+        electricity_start: r.electricityStart || null,
+        electricity_end: r.electricityEnd || null,
+        risk_assessment: r.riskAssessment || 0,
+        risk_assessment_start: r.riskAssessmentStart || null,
+        risk_assessment_end: r.riskAssessmentEnd || null,
+        fire_fighting: r.fireFighting || 0,
+        fire_fighting_start: r.fireFightingStart || null,
+        fire_fighting_end: r.fireFightingEnd || null,
+        first_aid: r.firstAid || 0,
+        first_aid_start: r.firstAidStart || null,
+        first_aid_end: r.firstAidEnd || null,
+        ppe: r.ppe || 0,
+        ppe_start: r.ppeStart || null,
+        ppe_end: r.ppeEnd || null,
+      };
+    });
+    const { error } = await supabase.from('safety_records').upsert(mapped);
+    if (error) {
+      console.warn("Error syncing safety_records:", error);
+      throw new Error(`Error syncing safety records: ${error.message}`);
+    }
   }
 };
 
@@ -376,25 +388,28 @@ export const syncPoBudgets = async (data: POBudget[]) => {
 
 export const syncSalaryOverrides = async (data: Record<string, SalaryRecord>) => {
   const keys = Object.keys(data);
-  if (!keys.length) return;
-  const mapped = keys.map(k => {
-    const r = data[k];
-    return {
-      id: k,
-      ot: r.otherCostNet !== undefined ? r.otherCostNet : (r.ot || 0),
-      bonus: r.laptop !== undefined ? r.laptop : (r.bonus || 0),
-      gift: r.gift || 0,
-      retro: r.retro || 0,
-      mobile: r.mobile || 0,
-      top_hero: r.topHero || 0,
-      po_numbers: r.poNumbers || null,
-      po_amount_requests: r.poAmountRequests || null,
-    };
-  });
-  const { error } = await supabase.from('salary_records').upsert(mapped);
-  if (error) {
-    console.warn("Error syncing salary_records:", error);
-    throw new Error(`Error syncing salary records: ${error.message}`);
+  await syncDeleteRemoved('salary_records', keys);
+
+  if (keys.length > 0) {
+    const mapped = keys.map(k => {
+      const r = data[k];
+      return {
+        id: k,
+        ot: r.otherCostNet !== undefined ? r.otherCostNet : (r.ot || 0),
+        bonus: r.laptop !== undefined ? r.laptop : (r.bonus || 0),
+        gift: r.gift || 0,
+        retro: r.retro || 0,
+        mobile: r.mobile || 0,
+        top_hero: r.topHero || 0,
+        po_numbers: r.poNumbers || null,
+        po_amount_requests: r.poAmountRequests || null,
+      };
+    });
+    const { error } = await supabase.from('salary_records').upsert(mapped);
+    if (error) {
+      console.warn("Error syncing salary_records:", error);
+      throw new Error(`Error syncing salary records: ${error.message}`);
+    }
   }
 };
 

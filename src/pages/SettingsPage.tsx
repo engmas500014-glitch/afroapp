@@ -43,11 +43,18 @@ export function SettingsPage() {
     syncState,
     syncError,
     triggerManualSync,
+    supabaseEnabled,
+    setSupabaseEnabled,
   } = useAppContext();
   
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState("");
   const [testResult, setTestResult] = useState<{ success: boolean; msg: string } | null>(null);
+  
+  // Local states for custom Supabase connection settings
+  const [localUrl, setLocalUrl] = useState(() => localStorage.getItem("custom_supabase_url") || "");
+  const [localKey, setLocalKey] = useState(() => localStorage.getItem("custom_supabase_anon_key") || "");
+  const [isSavedCreds, setIsSavedCreds] = useState(false);
   const allProjects = Array.from(new Set(accounts.flatMap(acc => acc.projects)));
   const [newPosition, setNewPosition] = useState("");
   const [newAccount, setNewAccount] = useState("");
@@ -287,12 +294,120 @@ export function SettingsPage() {
           <CardTitle>Database Connection & Synchronization (Supabase)</CardTitle>
         </CardHeader>
         <CardContent className="p-6">
-          <p className="text-sm text-muted-fg mb-4">
-            Test your connection to the Supabase database or manually trigger a full synchronization. This will push all your current local state (employees, financial configurations, safety records, and more) into the Supabase database.
+          <p className="text-sm text-muted-fg mb-6">
+            Configure, toggle, or test your connection to the Supabase database. Synchronization allows you to back up all your current local state (employees, financial configurations, safety records, and more) into the Supabase database.
           </p>
+
+          {/* Toggle Switch */}
+          <div className="flex items-center justify-between p-4 mb-6 rounded-lg bg-slate-50 dark:bg-slate-900 border border-border">
+            <div className="mr-4">
+              <h3 className="font-semibold text-sm text-ink">Supabase Synchronization</h3>
+              <p className="text-xs text-muted-fg mt-0.5">When disabled, the application runs entirely in offline-first Local Storage mode without any external database calls.</p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className={cn("text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded", supabaseEnabled ? "bg-green-500/10 text-green-600 dark:text-green-400" : "bg-slate-500/10 text-slate-500")}>
+                {supabaseEnabled ? "ENABLED" : "LOCAL MODE"}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setSupabaseEnabled(!supabaseEnabled);
+                  setSyncStatus("");
+                  setTestResult(null);
+                }}
+                className={cn(
+                  "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
+                  supabaseEnabled ? "bg-primary" : "bg-neutral-300 dark:bg-neutral-700"
+                )}
+              >
+                <span
+                  className={cn(
+                    "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                    supabaseEnabled ? "translate-x-5" : "translate-x-0"
+                  )}
+                />
+              </button>
+            </div>
+          </div>
+
+          {/* Connection Settings */}
+          {supabaseEnabled && (
+            <div className="space-y-4 mb-6 p-4 rounded-lg border border-border bg-muted/20">
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-fg">Supabase Credentials</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-ink">Supabase Project URL</label>
+                  <Input
+                    placeholder="https://your-project-id.supabase.co"
+                    value={localUrl}
+                    onChange={(e) => {
+                      setLocalUrl(e.target.value);
+                      setIsSavedCreds(false);
+                    }}
+                    className="font-mono text-xs"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-ink">Supabase Anon Key</label>
+                  <Input
+                    placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    value={localKey}
+                    onChange={(e) => {
+                      setLocalKey(e.target.value);
+                      setIsSavedCreds(false);
+                    }}
+                    className="font-mono text-xs"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-2 border-t border-border/50">
+                {(localStorage.getItem("custom_supabase_url") || localStorage.getItem("custom_supabase_anon_key")) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setLocalUrl("");
+                      setLocalKey("");
+                      localStorage.removeItem("custom_supabase_url");
+                      localStorage.removeItem("custom_supabase_anon_key");
+                      setIsSavedCreds(true);
+                      setTimeout(() => {
+                        window.location.reload();
+                      }, 800);
+                    }}
+                  >
+                    Reset to Default
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    if (localUrl) {
+                      localStorage.setItem("custom_supabase_url", localUrl.trim());
+                    } else {
+                      localStorage.removeItem("custom_supabase_url");
+                    }
+                    if (localKey) {
+                      localStorage.setItem("custom_supabase_anon_key", localKey.trim());
+                    } else {
+                      localStorage.removeItem("custom_supabase_anon_key");
+                    }
+                    setIsSavedCreds(true);
+                    setTimeout(() => {
+                      window.location.reload();
+                    }, 800);
+                  }}
+                  disabled={isSavedCreds}
+                >
+                  {isSavedCreds ? "Credentials Saved! Reloading..." : "Save Credentials & Reload"}
+                </Button>
+              </div>
+            </div>
+          )}
           
           <div className="flex flex-wrap gap-3">
             <Button 
+              disabled={!supabaseEnabled}
               onClick={async () => {
                 setTestResult(null);
                 try {
@@ -316,7 +431,7 @@ export function SettingsPage() {
             </Button>
 
             <Button 
-              disabled={isSyncing || syncState === 'syncing'}
+              disabled={!supabaseEnabled || isSyncing || syncState === 'syncing'}
               onClick={async () => {
                 setIsSyncing(true);
                 setSyncStatus("Initiating full synchronization...");
