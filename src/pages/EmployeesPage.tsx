@@ -21,6 +21,9 @@ import {
   ChevronDown,
   ChevronUp,
   Trash2,
+  Users,
+  UserCheck,
+  UserX,
 } from "lucide-react";
 
 export function EmployeesPage() {
@@ -441,11 +444,20 @@ export function EmployeesPage() {
     document.body.removeChild(link);
   };
 
+  const totalCount = employees.length;
+  const activeCount = employees.filter(e => e.status === "Active").length;
+  const resignedCount = employees.filter(e => e.status === "Resigned").length;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Employees</h2>
+          <h2 className="text-2xl font-bold tracking-tight flex items-center gap-3">
+            Employees
+            <span className="text-sm font-medium bg-accent/10 text-accent px-2.5 py-0.5 rounded-full">
+              {filteredEmployees.length} {filteredEmployees.length !== totalCount ? `of ${totalCount}` : ""}
+            </span>
+          </h2>
           <p className="text-muted-fg">Manage employee records and statuses.</p>
         </div>
         <div className="flex gap-2 items-center flex-wrap">
@@ -479,6 +491,48 @@ export function EmployeesPage() {
             </Button>
           )}
         </div>
+      </div>
+
+      {/* Stats Cards Row */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs font-semibold tracking-wider text-muted-fg uppercase">
+              Total Employees / إجمالي الموظفين
+            </CardTitle>
+            <Users className="h-4 w-4 text-accent" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-ink">{totalCount}</div>
+            <p className="text-xs text-muted-fg mt-1">Total registered in system</p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs font-semibold tracking-wider text-muted-fg uppercase">
+              Active Employees / الموظفين النشطين
+            </CardTitle>
+            <UserCheck className="h-4 w-4 text-emerald-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{activeCount}</div>
+            <p className="text-xs text-muted-fg mt-1">Currently active members</p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs font-semibold tracking-wider text-muted-fg uppercase">
+              Resigned Employees / الموظفين المستقيلين
+            </CardTitle>
+            <UserX className="h-4 w-4 text-rose-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-rose-600 dark:text-rose-400">{resignedCount}</div>
+            <p className="text-xs text-muted-fg mt-1">Formerly employed members</p>
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
