@@ -275,6 +275,62 @@ export function EmployeesPage() {
           const generatedHrCode = `HR-${(1000 + empCount).toString()}`;
           const hrCode = rowHrCode || (existingEmp ? existingEmp.hrCode : generatedHrCode);
 
+          const parseImportedDate = (dateVal: any): string => {
+            if (!dateVal) return "";
+            const str = String(dateVal).trim();
+            if (!str) return "";
+
+            // If it's a serial number from Excel (usually a number between 10000 and 60000)
+            if (/^\d+(\.\d+)?$/.test(str)) {
+              const num = parseFloat(str);
+              if (num > 30000 && num < 60000) {
+                const excelEpoch = new Date(1899, 11, 30);
+                const millisecondsInDay = 24 * 60 * 60 * 1000;
+                const d = new Date(excelEpoch.getTime() + num * millisecondsInDay);
+                if (!isNaN(d.getTime())) {
+                  const yyyy = d.getFullYear();
+                  const mm = String(d.getMonth() + 1).padStart(2, '0');
+                  const dd = String(d.getDate()).padStart(2, '0');
+                  return `${yyyy}-${mm}-${dd}`;
+                }
+              }
+            }
+
+            // Try parsing YYYY-MM-DD
+            if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+              return str;
+            }
+
+            // Try parsing YYYY/MM/DD
+            if (/^\d{4}\/\d{2}\/\d{2}$/.test(str)) {
+              return str.replace(/\//g, '-');
+            }
+
+            // Try DD/MM/YYYY or DD-MM-YYYY
+            let match = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+            if (match) {
+              const day = match[1].padStart(2, '0');
+              const month = match[2].padStart(2, '0');
+              const year = match[3];
+              return `${year}-${month}-${day}`;
+            }
+
+            // Generic JS Date parsing
+            try {
+              const d = new Date(str);
+              if (!isNaN(d.getTime())) {
+                const yyyy = d.getFullYear();
+                const mm = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                return `${yyyy}-${mm}-${dd}`;
+              }
+            } catch (e) {
+              // Ignore and fallback
+            }
+
+            return str;
+          };
+
           const getValue = (keys: string[], fallback: any) => {
             for (const key of keys) {
               if (row[key] !== undefined && row[key] !== null) {
@@ -294,8 +350,8 @@ export function EmployeesPage() {
             email: getValue(["Email", "email"], existingEmp ? existingEmp.email : ""),
             phone1: getValue(["Phone 1", "phone1"], existingEmp ? existingEmp.phone1 : ""),
             phone2: getValue(["Phone 2 (Optional)", "Phone 2", "phone2"], existingEmp ? existingEmp.phone2 : ""),
-            dateHiring: getValue(["Date Hiring", "dateHiring"], existingEmp ? existingEmp.dateHiring : new Date().toISOString().split('T')[0]),
-            dateResign: getValue(["Date Resign", "dateResign"], existingEmp ? existingEmp.dateResign : ""),
+            dateHiring: parseImportedDate(getValue(["Date Hiring", "dateHiring"], existingEmp ? existingEmp.dateHiring : new Date().toISOString().split('T')[0])),
+            dateResign: parseImportedDate(getValue(["Date Resign", "dateResign"], existingEmp ? existingEmp.dateResign : "")),
             status: row["Status"] !== undefined ? (row["Status"] === "Resigned" ? "Resigned" : "Active") : (existingEmp ? existingEmp.status : "Active"),
             bankAccount: getValue(["Bank Account", "bankAccount"], existingEmp ? existingEmp.bankAccount : ""),
             netSalary: Number(getValue(["Net Salary (EGP)", "Net Salary", "netSalary"], existingEmp ? existingEmp.netSalary : 0)),

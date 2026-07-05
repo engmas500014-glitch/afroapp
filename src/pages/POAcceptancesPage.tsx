@@ -29,6 +29,7 @@ export function POAcceptancesPage() {
   const [editPoAmountRequests, setEditPoAmountRequests] = useState<Record<string, number | "">>({});
   const [editPoSearch, setEditPoSearch] = useState("");
   const [editPoAmounts, setEditPoAmounts] = useState<Record<string, number | "">>({});
+  const [poToDelete, setPoToDelete] = useState<string | null>(null);
   const [showViewUnusedPo, setShowViewUnusedPo] = useState(false);
   const [showCollectStateModal, setShowCollectStateModal] = useState(false);
   const [collectDateFrom, setCollectDateFrom] = useState("");
@@ -709,6 +710,20 @@ export function POAcceptancesPage() {
     setPoAcceptances((prev) => prev.filter((r) => r.id !== id));
   };
 
+  const handleDeletePoNumber = (poNumber: string) => {
+    setPoToDelete(poNumber);
+  };
+
+  const confirmDeletePo = (poNumber: string) => {
+    setPoAcceptances((prev) => prev.filter((r) => r.poNumber !== poNumber));
+    setEditPoAmounts((prev) => {
+      const copy = { ...prev };
+      delete copy[poNumber];
+      return copy;
+    });
+    setPoToDelete(null);
+  };
+
   const posNeedingAmount = currentRecords.filter(r => {
     if (!r.poNumber) return false;
     const globalAmount = poAcceptances
@@ -1284,14 +1299,14 @@ export function POAcceptancesPage() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="text-sm font-medium text-muted-fg grid grid-cols-2 gap-4 px-3 mb-2">
-                    <div>PO Number</div>
-                    <div>Total PO Amount</div>
+                  <div className="text-sm font-medium text-muted-fg flex justify-between items-center px-3 mb-2">
+                    <div className="flex-1">PO Number</div>
+                    <div className="w-40 mr-14">Total PO Amount</div>
                   </div>
                   
                   {posForEditing.map(po => (
                     <div key={po.poNumber} className="flex items-center gap-4 p-3 bg-muted/20 border border-border rounded-lg">
-                      <div className="flex-1 font-mono font-medium">
+                      <div className="flex-1 font-mono font-medium truncate">
                         {po.poNumber}
                       </div>
                       <Input
@@ -1301,6 +1316,15 @@ export function POAcceptancesPage() {
                         onChange={(e) => setEditPoAmounts(prev => ({ ...prev, [po.poNumber]: e.target.value === "" ? "" : Number(e.target.value) }))}
                         className="w-40 font-bold bg-card"
                       />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeletePoNumber(po.poNumber)}
+                        className="h-10 w-10 text-danger hover:bg-red-50 shrink-0"
+                        title="Delete PO"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   ))}
                 </div>
@@ -1314,6 +1338,39 @@ export function POAcceptancesPage() {
               </Button>
             </div>
           </Card>
+
+          {/* Delete PO confirmation overlay */}
+          {poToDelete !== null && (
+            <div className="fixed inset-0 bg-ink/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+              <Card className="w-full max-w-md shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+                <div className="p-6 text-center space-y-4">
+                  <div className="w-12 h-12 rounded-full bg-danger/10 flex items-center justify-center mx-auto">
+                    <Trash2 className="w-6 h-6 text-danger" />
+                  </div>
+                  <h3 className="font-bold text-lg text-ink">Delete PO Number</h3>
+                  <p className="text-sm text-muted-fg leading-relaxed">
+                    Are you sure you want to delete PO <strong className="font-mono text-ink">"{poToDelete}"</strong>? This will delete all associated PO acceptance records. This action cannot be undone.
+                  </p>
+                  <div className="pt-4 flex gap-3 justify-center">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setPoToDelete(null)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      onClick={() => confirmDeletePo(poToDelete)}
+                    >
+                      Delete PO
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          )}
         </div>
       )}
 
