@@ -12,11 +12,15 @@ async function startServer() {
   app.use(express.json());
 
   // CORS: the production frontend is hosted on a different origin (afroapp.site)
-  // and reaches this server through its public/tunnel URL.
+  // and reaches this server through its public/tunnel URL, or directly on
+  // http://localhost:3000 from the machine running this server.
   app.use('/api', (req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, ngrok-skip-browser-warning');
+    // Private Network Access: allow the public HTTPS site to call this
+    // local server (Chrome requires this header on the preflight response).
+    res.setHeader('Access-Control-Allow-Private-Network', 'true');
     if (req.method === 'OPTIONS') {
       res.sendStatus(204);
       return;
@@ -46,7 +50,7 @@ async function startServer() {
 
   // API endpoint to send a single payslip
   app.post('/api/send-payslip', async (req, res) => {
-    const { email, employeeName, netSalary, details, month, year } = req.body;
+    const { email, cc, employeeName, netSalary, details, month, year } = req.body;
 
     if (!email || !employeeName || !netSalary || !month || !year) {
        res.status(400).json({ error: 'Missing required fields' });
@@ -62,6 +66,7 @@ async function startServer() {
       const mailOptions = {
         from: `"Nazam HR" <${process.env.SMTP_FROM || 'no-reply@example.com'}>`,
         to: email, // use a real email when testing, or the employee's setup email
+        ...(cc ? { cc } : {}),
         subject: `Payslip for ${month} ${year}`,
         html: `
           <div style="font-family: 'Segoe UI', Arial, sans-serif; padding: 30px; color: #333; max-width: 600px; line-height: 1.6; border: 1px solid #eaeaea; border-radius: 8px;">
@@ -171,6 +176,7 @@ async function startServer() {
           await transporter.sendMail({
             from: `"Nazam HR" <${process.env.SMTP_FROM || 'no-reply@example.com'}>`,
             to: emp.email || 'employee@example.com', // fallback to dummy for safety if not set
+            ...(emp.cc ? { cc: emp.cc } : {}),
             subject: `Payslip for ${month} ${year}`,
             html: `
           <div style="font-family: 'Segoe UI', Arial, sans-serif; padding: 30px; color: #333; max-width: 600px; line-height: 1.6; border: 1px solid #eaeaea; border-radius: 8px;">

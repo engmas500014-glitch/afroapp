@@ -71,7 +71,7 @@ app.get('/api/health', (_req, res) => {
 });
 
 app.post('/api/send-payslip', async (req, res) => {
-  const { email, employeeName, netSalary, details, month, year } = req.body || {};
+  const { email, cc, employeeName, netSalary, details, month, year } = req.body || {};
   if (!email || !employeeName || netSalary == null || !month || !year)
     return res.status(400).json({ error: 'Missing required fields' });
   if (!isSmtpConfigured())
@@ -80,6 +80,7 @@ app.post('/api/send-payslip', async (req, res) => {
     await transporter.sendMail({
       from: `"AFRO HR" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
       to: email,
+      ...(cc ? { cc } : {}),
       subject: `Payslip for ${month} ${year}`,
       html: payslipHtml(employeeName, month, year, details, netSalary),
     });
@@ -102,6 +103,7 @@ app.post('/api/send-all-payslips', async (req, res) => {
       await transporter.sendMail({
         from: `"AFRO HR" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
         to: emp.email,
+        ...(emp.cc ? { cc: emp.cc } : {}),
         subject: `Payslip for ${month} ${year}`,
         html: payslipHtml(emp.name, month, year, emp.details, emp.netSalary),
       });

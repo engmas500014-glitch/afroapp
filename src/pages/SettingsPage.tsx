@@ -30,6 +30,8 @@ export function SettingsPage() {
     setPositions,
     accounts,
     setAccounts,
+    projectManagers,
+    setProjectManagers,
     finConfig,
     setFinConfig,
     user,
@@ -559,6 +561,45 @@ export function SettingsPage() {
             )}>
               <span className="font-bold uppercase tracking-wider">{emailTestResult.success ? "Success:" : "Error:"}</span> {emailTestResult.msg}
             </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Project Managers — CC on Payslips */}
+      <Card>
+        <CardHeader className="border-b border-border bg-muted/50">
+          <CardTitle>Project Managers — CC on Payslips</CardTitle>
+        </CardHeader>
+        <CardContent className="p-6 space-y-4">
+          <p className="text-xs text-muted-fg">
+            إيميل مدير كل مشروع. لما تبعت قسيمة راتب لموظف، إيميل مدير مشروعه بيتحط تلقائياً في CC.
+            سيب الخانة فاضية لو مفيش مدير للمشروع ده.
+          </p>
+          {allProjects.length > 0 ? (
+            <div className="space-y-2 max-h-[420px] overflow-y-auto pr-2">
+              {allProjects.map((proj: string) => (
+                <div
+                  key={proj}
+                  className="flex flex-col sm:flex-row sm:items-center gap-2 p-3 bg-card-bg border border-border rounded-md"
+                >
+                  <span className="font-medium text-ink text-sm sm:w-1/3 shrink-0 truncate" title={proj}>{proj}</span>
+                  <Input
+                    type="email"
+                    placeholder="manager@example.com"
+                    value={projectManagers[proj] || ""}
+                    disabled={!canEdit}
+                    onChange={(e) =>
+                      setProjectManagers((prev) => ({ ...prev, [proj]: e.target.value }))
+                    }
+                    className="font-mono text-xs flex-1"
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-fg text-center py-4">
+              لا توجد مشاريع. أضف الحسابات والمشاريع أولاً من الأسفل.
+            </p>
           )}
         </CardContent>
       </Card>

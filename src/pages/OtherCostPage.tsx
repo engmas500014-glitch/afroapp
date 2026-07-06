@@ -31,6 +31,7 @@ export function OtherCostPage() {
     permissions,
     salaryOverrides,
     setSalaryOverrides,
+    projectManagers,
   } = useAppContext();
   const [selectedMonth, setSelectedMonth] = useState("Jan");
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -201,6 +202,7 @@ export function OtherCostPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             email: emp.email,
+            cc: (emp.project && projectManagers[emp.project]) || undefined,
             employeeName: emp.name,
             netSalary,
             details: {
@@ -285,6 +287,7 @@ export function OtherCostPage() {
             id: emp.id,
             name: emp.name,
             email: emp.email,
+            cc: (emp.project && projectManagers[emp.project]) || undefined,
             netSalary: totalOtherCost,
             details: {
               base: currentNetSalary,

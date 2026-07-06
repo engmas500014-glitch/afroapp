@@ -117,7 +117,7 @@ function smtp_cmd($fp, $cmd, $expected) {
     return smtp_read($fp, $expected);
 }
 
-function smtp_send_mail($config, $to, $subject, $html) {
+function smtp_send_mail($config, $to, $subject, $html, $cc = '') {
     $host   = $config['smtp_host'];
     $port   = (int)$config['smtp_port'];
     $secure = strtolower($config['smtp_secure']);
@@ -151,10 +151,12 @@ function smtp_send_mail($config, $to, $subject, $html) {
 
     smtp_cmd($fp, "MAIL FROM:<$from>", 250);
     smtp_cmd($fp, "RCPT TO:<$to>", 250);
+    if ($cc) smtp_cmd($fp, "RCPT TO:<$cc>", 250);   // deliver a copy to the CC address
     smtp_cmd($fp, "DATA", 354);
 
     $headers  = "From: =?UTF-8?B?" . base64_encode($fname) . "?= <$from>\r\n";
     $headers .= "To: <$to>\r\n";
+    if ($cc) $headers .= "Cc: <$cc>\r\n";
     $headers .= "Subject: =?UTF-8?B?" . base64_encode($subject) . "?=\r\n";
     $headers .= "MIME-Version: 1.0\r\n";
     $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
@@ -185,7 +187,8 @@ if ($route === 'send-payslip' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     try {
         $html = build_payslip_html($name, $month, $year, $details, $netSalary);
-        smtp_send_mail($config, $email, "Payslip for $month $year", $html);
+        $cc = isset($body['cc']) ? trim($body['cc']) : '';
+        smtp_send_mail($config, $email, "Payslip for $month $year", $html, $cc);
         respond(200, ['message' => 'Payslip sent successfully']);
     } catch (SmtpException $e) {
         $msg = $e->getMessage();
@@ -224,7 +227,8 @@ if ($route === 'send-all-payslips' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 isset($emp['details']) ? $emp['details'] : [],
                 isset($emp['netSalary']) ? $emp['netSalary'] : 0
             );
-            smtp_send_mail($config, $to, "Payslip for $month $year", $html);
+            $cc = isset($emp['cc']) ? trim($emp['cc']) : '';
+            smtp_send_mail($config, $to, "Payslip for $month $year", $html, $cc);
             $success++;
         } catch (SmtpException $e) {
             $fail++;
