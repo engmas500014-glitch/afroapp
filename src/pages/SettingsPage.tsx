@@ -21,8 +21,38 @@ import {
   Folder,
   Save,
   Check,
+  SlidersHorizontal,
+  Database,
+  Mail,
+  Users,
+  Briefcase,
+  FolderTree,
+  Tags,
+  Layers,
 } from "lucide-react";
 import { getEmailServerUrl, setEmailServerUrl, checkEmailServerHealth } from "../lib/emailServer";
+
+// Consistent, icon-led section header used across the settings cards.
+function SectionHeader({
+  icon: Icon,
+  title,
+  color,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  color: string;
+}) {
+  return (
+    <CardHeader className="flex-row items-center gap-3 space-y-0 border-b border-border bg-gradient-to-r from-muted/60 to-transparent py-4">
+      <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg", color)}>
+        <Icon className="h-[18px] w-[18px]" />
+      </div>
+      <CardTitle className="text-sm font-semibold normal-case tracking-normal text-ink">
+        {title}
+      </CardTitle>
+    </CardHeader>
+  );
+}
 
 export function SettingsPage() {
   const {
@@ -291,17 +321,24 @@ export function SettingsPage() {
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-ink">System Settings</h1>
-        <p className="text-muted-fg text-sm mt-1">
-          Manage system-wide lookups and configurations.
-        </p>
+      <div className="flex items-center gap-4 pb-2 border-b border-border">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <SlidersHorizontal className="h-6 w-6" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-ink">System Settings</h1>
+          <p className="text-muted-fg text-sm mt-0.5">
+            Manage system-wide lookups and configurations.
+          </p>
+        </div>
       </div>
 
       <Card>
-        <CardHeader className="border-b border-border bg-muted/50">
-          <CardTitle>Database Connection & Synchronization (Supabase)</CardTitle>
-        </CardHeader>
+        <SectionHeader
+          icon={Database}
+          color="bg-blue-500/10 text-blue-500"
+          title="Database Connection & Synchronization (Supabase)"
+        />
         <CardContent className="p-6">
           <p className="text-sm text-muted-fg mb-6">
             Configure, toggle, or test your connection to the Supabase database. Synchronization allows you to back up all your current local state (employees, financial configurations, safety records, and more) into the Supabase database.
@@ -485,9 +522,11 @@ export function SettingsPage() {
 
       {/* Email Server (Payslips) Settings */}
       <Card>
-        <CardHeader className="border-b border-border bg-muted/50">
-          <CardTitle>Email Server (Payslips)</CardTitle>
-        </CardHeader>
+        <SectionHeader
+          icon={Mail}
+          color="bg-emerald-500/10 text-emerald-500"
+          title="Email Server (Payslips)"
+        />
         <CardContent className="p-6 space-y-4">
           <p className="text-xs text-muted-fg">
             Payslip emails are sent through the app's email server (server.ts with SMTP credentials).
@@ -567,9 +606,11 @@ export function SettingsPage() {
 
       {/* Project Managers — CC on Payslips */}
       <Card>
-        <CardHeader className="border-b border-border bg-muted/50">
-          <CardTitle>Project Managers — CC on Payslips</CardTitle>
-        </CardHeader>
+        <SectionHeader
+          icon={Users}
+          color="bg-violet-500/10 text-violet-500"
+          title="Project Managers — CC on Payslips"
+        />
         <CardContent className="p-6 space-y-4">
           <p className="text-xs text-muted-fg">
             إيميل مدير كل مشروع. لما تبعت قسيمة راتب لموظف، إيميل مدير مشروعه بيتحط تلقائياً في CC.
@@ -618,9 +659,11 @@ export function SettingsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Positions Setttings */}
         <Card>
-          <CardHeader className="border-b border-border bg-muted/50">
-            <CardTitle>Positions</CardTitle>
-          </CardHeader>
+          <SectionHeader
+            icon={Briefcase}
+            color="bg-amber-500/10 text-amber-500"
+            title="Positions"
+          />
           <CardContent className="p-6 space-y-6">
             <form onSubmit={handleAddPosition} className="flex gap-2">
               <Input
@@ -662,9 +705,11 @@ export function SettingsPage() {
 
         {/* Accounts & Projects Settings */}
         <Card>
-          <CardHeader className="border-b border-border bg-muted/50">
-            <CardTitle>Accounts & Projects</CardTitle>
-          </CardHeader>
+          <SectionHeader
+            icon={FolderTree}
+            color="bg-sky-500/10 text-sky-500"
+            title="Accounts & Projects"
+          />
           <CardContent className="p-6 space-y-6">
             <form onSubmit={handleAddAccount} className="flex gap-2">
               <Input
@@ -822,9 +867,11 @@ export function SettingsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Core Allocation Labels */}
         <Card>
-          <CardHeader className="border-b border-border bg-muted/50">
-            <CardTitle>Core Finances Labels</CardTitle>
-          </CardHeader>
+          <SectionHeader
+            icon={Tags}
+            color="bg-rose-500/10 text-rose-500"
+            title="Core Finances Labels"
+          />
           <CardContent className="p-6 space-y-4 max-h-[500px] overflow-y-auto">
             <div className="grid grid-cols-1 gap-6">
               {Object.entries(localConf.labels)
@@ -921,9 +968,11 @@ export function SettingsPage() {
 
         {/* Custom Allocations */}
         <Card>
-          <CardHeader className="border-b border-border bg-muted/50">
-            <CardTitle>Custom Allocations</CardTitle>
-          </CardHeader>
+          <SectionHeader
+            icon={Layers}
+            color="bg-teal-500/10 text-teal-500"
+            title="Custom Allocations"
+          />
           <CardContent className="p-6 space-y-6 max-h-[500px] overflow-y-auto">
             <form onSubmit={handleAddCustomCategory} className="flex gap-2">
               <Input
