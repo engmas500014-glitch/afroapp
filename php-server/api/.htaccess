@@ -1,0 +1,10 @@
+# Route every /api/* request to index.php so the frontend can call
+# /api/health, /api/send-payslip, /api/send-all-payslips without .php suffixes.
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^ index.php [L]
+
+# Never serve the SMTP config file directly.
+<Files "config.php">
+    Require all denied
+</Files>
