@@ -149,14 +149,21 @@ function smtp_send_mail($config, $to, $subject, $html, $cc = '') {
     smtp_cmd($fp, base64_encode($user), 334);
     smtp_cmd($fp, base64_encode($pass), 235);   // 535 here = bad username/App Password
 
+    // Support one or more CC addresses (comma-separated).
+    $ccList = array_filter(array_map('trim', explode(',', (string)$cc)));
+
     smtp_cmd($fp, "MAIL FROM:<$from>", 250);
     smtp_cmd($fp, "RCPT TO:<$to>", 250);
-    if ($cc) smtp_cmd($fp, "RCPT TO:<$cc>", 250);   // deliver a copy to the CC address
+    foreach ($ccList as $ccAddr) {
+        smtp_cmd($fp, "RCPT TO:<$ccAddr>", 250);   // deliver a copy to each CC address
+    }
     smtp_cmd($fp, "DATA", 354);
 
     $headers  = "From: =?UTF-8?B?" . base64_encode($fname) . "?= <$from>\r\n";
     $headers .= "To: <$to>\r\n";
-    if ($cc) $headers .= "Cc: <$cc>\r\n";
+    if ($ccList) {
+        $headers .= "Cc: " . implode(', ', array_map(function ($a) { return "<$a>"; }, $ccList)) . "\r\n";
+    }
     $headers .= "Subject: =?UTF-8?B?" . base64_encode($subject) . "?=\r\n";
     $headers .= "MIME-Version: 1.0\r\n";
     $headers .= "Content-Type: text/html; charset=UTF-8\r\n";

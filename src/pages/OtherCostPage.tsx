@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 
 import { parseFlexibleDate } from "../lib/utils";
-import { getEmailServerUrl } from "../lib/emailServer";
+import { getEmailServerUrl, ccForProject } from "../lib/emailServer";
 
 export function OtherCostPage() {
   const {
@@ -202,7 +202,7 @@ export function OtherCostPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             email: emp.email,
-            cc: (emp.project && projectManagers[emp.project]) || undefined,
+            cc: ccForProject(projectManagers, emp.project),
             employeeName: emp.name,
             netSalary,
             details: {
@@ -287,7 +287,7 @@ export function OtherCostPage() {
             id: emp.id,
             name: emp.name,
             email: emp.email,
-            cc: (emp.project && projectManagers[emp.project]) || undefined,
+            cc: ccForProject(projectManagers, emp.project),
             netSalary: totalOtherCost,
             details: {
               base: currentNetSalary,

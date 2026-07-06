@@ -22,6 +22,18 @@ export const setEmailServerUrl = (url: string) => {
   }
 };
 
+// Build the comma-separated CC list of manager emails for an employee's project.
+export const ccForProject = (
+  managers: Record<string, string[]>,
+  project?: string,
+): string | undefined => {
+  if (!project) return undefined;
+  const list = (managers[project] || [])
+    .map((s) => (s || "").trim())
+    .filter(Boolean);
+  return list.length ? list.join(", ") : undefined;
+};
+
 export const isEmailServerConfigured = (): boolean => {
   // In dev the API is same-origin; in production a URL must be configured.
   return Boolean(getEmailServerUrl()) || process.env.NODE_ENV !== "production";

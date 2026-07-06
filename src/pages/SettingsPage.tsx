@@ -576,23 +576,34 @@ export function SettingsPage() {
             سيب الخانة فاضية لو مفيش مدير للمشروع ده.
           </p>
           {allProjects.length > 0 ? (
-            <div className="space-y-2 max-h-[420px] overflow-y-auto pr-2">
+            <div className="space-y-3 max-h-[460px] overflow-y-auto pr-2">
               {allProjects.map((proj: string) => (
                 <div
                   key={proj}
-                  className="flex flex-col sm:flex-row sm:items-center gap-2 p-3 bg-card-bg border border-border rounded-md"
+                  className="p-3 bg-card-bg border border-border rounded-md space-y-2"
                 >
-                  <span className="font-medium text-ink text-sm sm:w-1/3 shrink-0 truncate" title={proj}>{proj}</span>
-                  <Input
-                    type="email"
-                    placeholder="manager@example.com"
-                    value={projectManagers[proj] || ""}
-                    disabled={!canEdit}
-                    onChange={(e) =>
-                      setProjectManagers((prev) => ({ ...prev, [proj]: e.target.value }))
-                    }
-                    className="font-mono text-xs flex-1"
-                  />
+                  <span className="font-medium text-ink text-sm block truncate" title={proj}>{proj}</span>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    {[0, 1, 2].map((idx) => (
+                      <Input
+                        key={idx}
+                        type="email"
+                        placeholder={`مدير ${idx + 1} (اختياري)`}
+                        value={(projectManagers[proj] || [])[idx] || ""}
+                        disabled={!canEdit}
+                        onChange={(e) =>
+                          setProjectManagers((prev) => {
+                            const arr = [...(prev[proj] || [])];
+                            arr[idx] = e.target.value;
+                            // Trim trailing empty slots so we don't store blanks.
+                            while (arr.length && !arr[arr.length - 1]) arr.pop();
+                            return { ...prev, [proj]: arr };
+                          })
+                        }
+                        className="font-mono text-xs"
+                      />
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>

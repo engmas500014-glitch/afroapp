@@ -452,9 +452,9 @@ interface AppContextType {
   setAccounts: React.Dispatch<React.SetStateAction<AccountItem[]>>;
   projects: string[];
   setProjects: React.Dispatch<React.SetStateAction<string[]>>;
-  // Per-project manager email, CC'd on payslip emails for that project.
-  projectManagers: Record<string, string>;
-  setProjectManagers: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  // Per-project manager emails (up to 3), CC'd on payslip emails for that project.
+  projectManagers: Record<string, string[]>;
+  setProjectManagers: React.Dispatch<React.SetStateAction<Record<string, string[]>>>;
   systemUsers: User[];
   setSystemUsers: React.Dispatch<React.SetStateAction<User[]>>;
   finConfig: Record<string, ProjectConfig>;
@@ -903,11 +903,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const [projects, setProjects] = useState<string[]>([]);
 
-  // Per-project manager email (CC'd on payslip emails). Stored locally.
-  const [projectManagers, setProjectManagers] = useState<Record<string, string>>(() => {
+  // Per-project manager emails, up to 3 (CC'd on payslip emails). Stored locally.
+  const [projectManagers, setProjectManagers] = useState<Record<string, string[]>>(() => {
     const saved = localStorage.getItem("projectManagers");
     if (saved) {
-      try { return JSON.parse(saved); } catch (e) {}
+      try {
+        const parsed = JSON.parse(saved);
+        const out: Record<string, string[]> = {};
+        Object.keys(parsed).forEach((k) => {
+          const v = parsed[k];
+          // Migrate old single-string format to an array.
+          out[k] = Array.isArray(v) ? v : v ? [v] : [];
+        });
+        return out;
+      } catch (e) {}
     }
     return {};
   });
