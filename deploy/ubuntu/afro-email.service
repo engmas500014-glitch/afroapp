@@ -1,0 +1,16 @@
+[Unit]
+Description=AFRO HR payslip email server
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/afro-email
+EnvironmentFile=/opt/afro-email/.env
+ExecStart=/usr/bin/node /opt/afro-email/email-server.mjs
+Restart=always
+RestartSec=5
+User=www-data
+Group=www-data
+
+[Install]
+WantedBy=multi-user.target

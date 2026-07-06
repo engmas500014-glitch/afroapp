@@ -1,0 +1,20 @@
+# ===========================================================================
+# Add ONE of the blocks below to /etc/caddy/Caddyfile, then reload Caddy:
+#     sudo systemctl reload caddy
+# The email server listens on 127.0.0.1:3005; Caddy provides HTTPS.
+# ===========================================================================
+
+# ---- Option A: dedicated subdomain (needs a DNS record for the subdomain) --
+# Frontend "Email Server URL" becomes:  https://mail.afro-group.com
+mail.afro-group.com {
+    reverse_proxy 127.0.0.1:3005
+}
+
+# ---- Option B: path under an EXISTING site (no new DNS needed) -------------
+# Put this handle block INSIDE your existing site block, e.g. sys.afro-group.com { ... }
+# Frontend "Email Server URL" becomes:  https://<that-domain>/email
+#
+# handle /email/* {
+#     uri strip_prefix /email
+#     reverse_proxy 127.0.0.1:3005
+# }
