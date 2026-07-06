@@ -613,8 +613,8 @@ export function SettingsPage() {
         />
         <CardContent className="p-6 space-y-4">
           <p className="text-xs text-muted-fg">
-            إيميل مدير كل مشروع. لما تبعت قسيمة راتب لموظف، إيميل مدير مشروعه بيتحط تلقائياً في CC.
-            سيب الخانة فاضية لو مفيش مدير للمشروع ده.
+            Manager emails for each project. When a payslip is sent to an employee, the managers of
+            their project are automatically added in CC. Leave blank if a project has no manager.
           </p>
           {allProjects.length > 0 ? (
             <div className="space-y-3 max-h-[460px] overflow-y-auto pr-2">
@@ -629,7 +629,7 @@ export function SettingsPage() {
                       <Input
                         key={idx}
                         type="email"
-                        placeholder={`مدير ${idx + 1} (اختياري)`}
+                        placeholder={`Manager ${idx + 1} (optional)`}
                         value={(projectManagers[proj] || [])[idx] || ""}
                         disabled={!canEdit}
                         onChange={(e) =>
@@ -650,7 +650,7 @@ export function SettingsPage() {
             </div>
           ) : (
             <p className="text-sm text-muted-fg text-center py-4">
-              لا توجد مشاريع. أضف الحسابات والمشاريع أولاً من الأسفل.
+              No projects yet. Add accounts and projects below first.
             </p>
           )}
         </CardContent>
