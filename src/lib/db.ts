@@ -118,8 +118,8 @@ export const loadDataFromSupabase = async () => {
     mappedSalaryOverrides[r.id] = {
       ot: r.ot ?? 0,
       bonus: r.bonus ?? 0,
-      laptop: r.bonus ?? 0,
-      otherCostNet: r.ot ?? 0,
+      laptop: r.laptop ?? 0,
+      otherCostNet: r.other_cost_net ?? 0,
       gift: r.gift ?? 0,
       retro: r.retro ?? 0,
       mobile: r.mobile ?? 0,
@@ -400,8 +400,10 @@ export const syncSalaryOverrides = async (data: Record<string, SalaryRecord>) =>
       const r = data[k];
       return {
         id: k,
-        ot: r.otherCostNet !== undefined ? r.otherCostNet : (r.ot || 0),
-        bonus: r.laptop !== undefined ? r.laptop : (r.bonus || 0),
+        ot: r.ot || 0,
+        bonus: r.bonus || 0,
+        other_cost_net: r.otherCostNet || 0,
+        laptop: r.laptop || 0,
         gift: r.gift || 0,
         retro: r.retro || 0,
         mobile: r.mobile || 0,
