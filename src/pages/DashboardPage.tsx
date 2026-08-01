@@ -17,7 +17,7 @@ import {
 import { parseFlexibleDate } from "../lib/utils";
 
 export function DashboardPage() {
-  const { visibleEmployees: employees, visiblePoBudgets: poBudgets, salaryOverrides, finConfig, poAcceptances } = useAppContext();
+  const { visibleEmployees: employees, visiblePoBudgets: poBudgets, salaryOverrides, safetyRecords, poAcceptances } = useAppContext();
 
   // Dynamic selector states
   const uniqueAccounts = Array.from(
@@ -52,19 +52,6 @@ export function DashboardPage() {
   const [selectedYear, setSelectedYear] = React.useState<number>(defaultYear);
   const [selectedMonth, setSelectedMonth] = React.useState<string>("All");
 
-  const getGrossMultiplier = (projectName: string | undefined, key: string) => {
-    const p = projectName && projectName !== "All" ? projectName : "default";
-    const config = finConfig[p] || finConfig["default"] || {};
-    const defaultGross = {
-      poSalaries: 22,
-      poOT: 22,
-      poRetro: 22,
-      poTopHero: 22,
-    };
-    const pct = config.grossPercentages?.[key] ?? (defaultGross as Record<string, number>)[key] ?? 0;
-    return 1 + (pct / 100);
-  };
-
   const monthsOrder = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
   // Filter active employees based on current account, project, and month
@@ -96,150 +83,69 @@ export function DashboardPage() {
     return true;
   }).length;
 
-  // Filter budgets based on filters
-  let filteredBudgets = poBudgets.filter((p) => p.year === selectedYear);
-  if (selectedAccount !== "All") {
-    filteredBudgets = filteredBudgets.filter((p) => p.account === selectedAccount);
-  }
-  if (selectedProject !== "All") {
-    filteredBudgets = filteredBudgets.filter((p) => p.project === selectedProject);
-  }
+  // Total cost for one month, computed exactly like the Total Cost page:
+  // gross salary + allowances + mobile + safety + other cost, per employee.
+  const employeeCostForMonth = (month: string, year: number) => {
+    const monthIndex = monthsOrder.indexOf(month);
+    if (monthIndex === -1) return 0;
 
-  const computedBudgets = filteredBudgets.map((budget) => {
-    const monthIndex = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-    ].indexOf(budget.month);
-    const startOfBudgetMonth = new Date(budget.year, monthIndex, 1);
-    const endOfBudgetMonth = new Date(budget.year, monthIndex + 1, 0);
-    const totalDaysInMonth = endOfBudgetMonth.getDate();
+    const startOfMonth = new Date(year, monthIndex, 1);
+    const endOfMonth = new Date(year, monthIndex + 1, 0, 23, 59, 59);
+    const totalDaysInMonth = new Date(year, monthIndex + 1, 0).getDate();
 
-    const calculateProratedSalary = (emp: any) => {
-      const hiringDateLocal = parseFlexibleDate(emp.dateHiring);
-      if (!hiringDateLocal) return 0;
+    return employees.reduce((sum, emp) => {
+      if (selectedAccount !== "All" && emp.account !== selectedAccount) return sum;
+      if (selectedProject !== "All" && emp.project !== selectedProject) return sum;
 
-      let resignDateLocal = parseFlexibleDate(emp.dateResign);
+      const hiringDate = parseFlexibleDate(emp.dateHiring);
+      if (!hiringDate || hiringDate > endOfMonth) return sum;
+      const resignDate = parseFlexibleDate(emp.dateResign);
+      if (resignDate && resignDate < startOfMonth) return sum;
 
-      const actualStart =
-        hiringDateLocal > startOfBudgetMonth
-          ? hiringDateLocal
-          : startOfBudgetMonth;
-      const actualEnd =
-        resignDateLocal && resignDateLocal < endOfBudgetMonth
-          ? resignDateLocal
-          : endOfBudgetMonth;
+      const actualStart = hiringDate > startOfMonth ? hiringDate : startOfMonth;
+      const actualEnd = resignDate && resignDate < endOfMonth ? resignDate : endOfMonth;
+      if (actualStart > actualEnd) return sum;
 
-      if (actualStart > actualEnd) return 0;
+      const utcStart = Date.UTC(actualStart.getFullYear(), actualStart.getMonth(), actualStart.getDate());
+      const utcEnd = Date.UTC(actualEnd.getFullYear(), actualEnd.getMonth(), actualEnd.getDate());
+      const daysWorked = Math.floor((utcEnd - utcStart) / (1000 * 60 * 60 * 24)) + 1;
+      const baseSalary = emp.netSalary || 0;
+      const netSalary =
+        daysWorked >= totalDaysInMonth
+          ? baseSalary
+          : Math.round((baseSalary / totalDaysInMonth) * daysWorked);
 
-      const utcStart = Date.UTC(
-        actualStart.getFullYear(),
-        actualStart.getMonth(),
-        actualStart.getDate(),
-      );
-      const utcEnd = Date.UTC(
-        actualEnd.getFullYear(),
-        actualEnd.getMonth(),
-        actualEnd.getDate(),
-      );
+      const gross =
+        netSalary +
+        (emp.socialInsuranceEmployee || 0) +
+        (emp.socialInsuranceCompany || 0) +
+        (emp.taxes || 0) +
+        (emp.medical || 0);
 
-      const daysWorked =
-        Math.floor((utcEnd - utcStart) / (1000 * 60 * 60 * 24)) + 1;
-
-      if (daysWorked >= totalDaysInMonth) {
-        return emp.netSalary;
-      }
-      return Math.round((emp.netSalary / totalDaysInMonth) * daysWorked);
-    };
-
-    const projectEmployees = employees.filter((e) => {
-      if (e.account !== budget.account || e.project !== budget.project)
-        return false;
-      if (!e.dateHiring) return false;
-      const [hYear, hMonth, hDay] = e.dateHiring.split("-").map(Number);
-      const hiringDateLocal = new Date(hYear, hMonth - 1, hDay, 0, 0, 0);
-      if (isNaN(hiringDateLocal.getTime())) return false;
-
-      let resignDateLocal = null;
-      if (e.dateResign) {
-        const [rYear, rMonth, rDay] = e.dateResign.split("-").map(Number);
-        resignDateLocal = new Date(rYear, rMonth - 1, rDay, 0, 0, 0);
-      }
-      if (hiringDateLocal > endOfBudgetMonth) return false;
-      if (resignDateLocal && resignDateLocal < startOfBudgetMonth) return false;
-      return true;
-    });
-
-    let actualSalaries = 0;
-    let actualOT = 0;
-    let actualGift = 0;
-    let actualRetro = 0;
-    let mobileAllowance = 0;
-    let actualTopHero = 0;
-
-    projectEmployees.forEach((emp) => {
-      actualSalaries += calculateProratedSalary(emp);
-      const key = `${emp.id}_${budget.month}_${budget.year}`;
+      const key = `${emp.id}_${month}_${year}`;
       const ov = salaryOverrides[key];
+      const ot = ov?.ot || 0;
+      const topHero = ov?.topHero || 0;
+      const gift = ov ? ov.gift || 0 : month === "Mar" ? 500 : 0;
+      const retro = ov?.retro || 0;
+      const mobile = ov ? ov.mobile || 0 : 334.21;
+      const laptop = ov?.laptop !== undefined ? ov.laptop : ov?.bonus || 0;
+      const otherCostNet = ov?.otherCostNet || 0;
 
-      if (ov) {
-        actualOT += ov.ot || 0;
-        actualGift += ov.gift || 0;
-        actualRetro += ov.retro || 0;
-        mobileAllowance += ov.mobile || 0;
-        actualTopHero += ov.topHero || 0;
-      } else {
-        actualOT += 0;
-        actualGift += budget.month === "Mar" ? 500 : 0;
-        actualRetro += 0;
-        mobileAllowance += 334.21;
-        actualTopHero += 0;
-      }
-    });
+      const sr = safetyRecords[key];
+      const safety = sr
+        ? (sr.medicalCheck || 0) +
+          (sr.workingAtHeight || 0) +
+          (sr.electricity || 0) +
+          (sr.riskAssessment || 0) +
+          (sr.fireFighting || 0) +
+          (sr.firstAid || 0) +
+          (sr.ppe || 0)
+        : 0;
 
-    const actualMedical = projectEmployees.length * 800;
-    
-    const gs = getGrossMultiplier(budget.project, "poSalaries");
-    const go = getGrossMultiplier(budget.project, "poOT");
-    const gr = getGrossMultiplier(budget.project, "poRetro");
-    const gg = getGrossMultiplier(budget.project, "poGifts");
-    const gth = getGrossMultiplier(budget.project, "poTopHero");
-    const gb = getGrossMultiplier(budget.project, "poBreakfast");
-    const ga = getGrossMultiplier(budget.project, "poAnnual");
-    const gm = getGrossMultiplier(budget.project, "poMobile");
-    const gmed = getGrossMultiplier(budget.project, "poMedical");
-    const gl = getGrossMultiplier(budget.project, "poLaptop");
-
-    const totalActualCost =
-      actualSalaries * gs +
-      actualOT * go +
-      actualRetro * gr +
-      actualGift * gg +
-      actualTopHero * gth +
-      (budget.actualBreakfast || 0) * gb +
-      (budget.actualAnnual || 0) * ga +
-      mobileAllowance * gm +
-      actualMedical * gmed +
-      (budget.actualLaptop || 0) * gl;
-
-    return {
-      ...budget,
-      totalActualCost,
-    };
-  });
-
-  const monthlyFilteredBudgets = selectedMonth === "All"
-    ? computedBudgets
-    : computedBudgets.filter((p) => p.month === selectedMonth);
+      return sum + gross + ot + topHero + gift + retro + mobile + safety + laptop + otherCostNet;
+    }, 0);
+  };
 
   // Build a map of poNumber -> { accounts: Set<string>, projects: Set<string> }
   const poMapping = React.useMemo(() => {
@@ -297,18 +203,30 @@ export function DashboardPage() {
     }, 0);
   }, [poAcceptances, selectedYear, selectedMonth, selectedAccount, selectedProject, poMapping]);
 
-  const totalCost = monthlyFilteredBudgets.reduce(
-    (sum, p) => sum + p.totalActualCost,
+  // "All Months" means year-to-date: future months have no actual data yet, so
+  // including them would report projected salaries as actual cost.
+  const today = new Date();
+  const elapsedMonths =
+    selectedYear < today.getFullYear()
+      ? 12
+      : selectedYear > today.getFullYear()
+        ? 0
+        : today.getMonth() + 1;
+
+  const shownMonths =
+    selectedMonth === "All" ? monthsOrder.slice(0, elapsedMonths) : [selectedMonth];
+
+  const totalCost = shownMonths.reduce(
+    (sum, m) => sum + employeeCostForMonth(m, selectedYear),
     0,
   );
   const remainingBudget = totalPOAmount - totalCost;
 
-  // Chronologically sort monthly chart data
-  const chartData = [...monthlyFilteredBudgets]
-    .sort((a, b) => monthsOrder.indexOf(a.month) - monthsOrder.indexOf(b.month))
-    .map((po) => {
+  // Monthly chart data, in calendar order
+  const chartData = shownMonths
+    .map((month) => {
       // Find PO amount from poAcceptances for this specific month
-      const monthAcceptances = poAcceptances.filter((r) => r.year === selectedYear && r.month === po.month);
+      const monthAcceptances = poAcceptances.filter((r) => r.year === selectedYear && r.month === month);
       const filteredAccs = monthAcceptances.filter((r) => {
         if (selectedAccount !== "All") {
           const info = poMapping[r.poNumber];
@@ -330,9 +248,9 @@ export function DashboardPage() {
       }, 0);
 
       return {
-        month: po.month,
+        month,
         PO: monthPOAmount,
-        Actual: po.totalActualCost,
+        Actual: employeeCostForMonth(month, selectedYear),
       };
     });
 
