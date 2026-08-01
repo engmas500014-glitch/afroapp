@@ -452,7 +452,6 @@ export function SalariesPage() {
         const col = (names: string[]) =>
           header.findIndex((h) => names.some((n) => h.includes(n)));
         const iHr = col(["hr code", "hr_code", "hrcode"]);
-        const iName = col(["employee", "name"]);
         const iSalary = col(["salary (net)", "salary"]);
         const iOt = col(["ot (net)", "ot", "overtime"]);
         const iHero = col(["top hero", "hero"]);
@@ -460,16 +459,13 @@ export function SalariesPage() {
         const iRetro = col(["retro"]);
         const iMobile = col(["mobile"]);
 
-        if (iHr === -1 && iName === -1) {
-          showNotification("مفيش عمود HR Code ولا Employee في الملف.", "error");
+        if (iHr === -1) {
+          showNotification("الملف لازم يكون فيه عمود HR Code.", "error");
           return;
         }
 
         const byHr = new Map<string, Employee>(
           employees.map((emp) => [String(emp.hrCode || "").trim().toLowerCase(), emp]),
-        );
-        const byName = new Map<string, Employee>(
-          employees.map((emp) => [String(emp.name || "").trim().toLowerCase(), emp]),
         );
 
         let matched = 0;
@@ -479,9 +475,8 @@ export function SalariesPage() {
 
         for (let r = 1; r < rows.length; r++) {
           const row = rows[r];
-          const hr = iHr >= 0 ? String(row[iHr] || "").trim().toLowerCase() : "";
-          const nm = iName >= 0 ? String(row[iName] || "").trim().toLowerCase() : "";
-          const emp = (hr && byHr.get(hr)) || (nm && byName.get(nm));
+          const hr = String(row[iHr] || "").trim().toLowerCase();
+          const emp = hr ? byHr.get(hr) : undefined;
           if (!emp) { unmatched++; continue; }
           matched++;
 
