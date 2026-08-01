@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Card, CardHeader, Input, Button } from "../components/ui";
 import { useAppContext } from "../store/AppContext";
-import { Search, Edit2, Check, X, Download } from "lucide-react";
+import { Search, Edit2, Check, X, Download, Upload } from "lucide-react";
+import { parseSalaryImport } from "../lib/salaryImport";
 
 const formatVal = (val: number | undefined | null) => {
   if (!val) return "-";
@@ -9,7 +10,13 @@ const formatVal = (val: number | undefined | null) => {
 };
 
 export function CostPage() {
-  const { visibleEmployees: employees, user, permissions, salaryOverrides, setSalaryOverrides, safetyRecords } = useAppContext();
+  const { visibleEmployees: employees, employees: allEmployees, setEmployees, user, permissions, salaryOverrides, setSalaryOverrides, safetyRecords } = useAppContext();
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const [notification, setNotification] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const showNotification = (message: string, type: "success" | "error") => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 5000);
+  };
 
   const hasPermission = (module: string, action: string) => {
     if (!user) return false;
@@ -157,6 +164,46 @@ export function CostPage() {
     setEditingField(null);
   };
 
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file later
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const res = parseSalaryImport(
+          String(reader.result || ""),
+          allEmployees,
+          salaryOverrides,
+          selectedMonth,
+          selectedYear,
+        );
+        if (res.error) {
+          showNotification(res.error, "error");
+          return;
+        }
+        setSalaryOverrides(res.overrides);
+        if (res.salaryUpdates.size > 0) {
+          setEmployees((prev) =>
+            prev.map((emp) =>
+              res.salaryUpdates.has(emp.id)
+                ? { ...emp, netSalary: res.salaryUpdates.get(emp.id)! }
+                : emp,
+            ),
+          );
+        }
+        const msg =
+          `تم استيراد ${res.matched} موظف لشهر ${selectedMonth} ${selectedYear}` +
+          (res.unmatched ? ` — ${res.unmatched} صف مش متطابق` : "");
+        showNotification(msg, res.matched > 0 ? "success" : "error");
+      } catch (err) {
+        showNotification("فشل قراءة الملف. تأكد إنه ملف CSV صحيح.", "error");
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const handleExport = () => {
     if (filteredEmployees.length === 0) return;
 
@@ -290,6 +337,17 @@ export function CostPage() {
         </div>
       </div>
 
+      {notification && (
+        <div
+          className={`p-4 rounded-md flex justify-between items-center ${notification.type === "success" ? "bg-success/10 text-success border border-success/20" : "bg-danger/10 text-danger border border-danger/20"}`}
+        >
+          <span>{notification.message}</span>
+          <button onClick={() => setNotification(null)} className="opacity-70 hover:opacity-100">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       <Card>
         <CardHeader className="py-4 border-b bg-muted flex flex-col gap-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -334,6 +392,20 @@ export function CostPage() {
                 className="pl-9 bg-input-bg w-full"
               />
             </div>
+            {canEdit && (
+              <>
+                <input
+                  ref={importInputRef}
+                  type="file"
+                  accept=".csv,text/csv"
+                  className="hidden"
+                  onChange={handleImportFile}
+                />
+                <Button onClick={() => importInputRef.current?.click()} variant="outline" className="gap-2 shrink-0 self-end sm:self-auto">
+                  <Upload className="w-4 h-4" /> Import
+                </Button>
+              </>
+            )}
             {canExport && (
               <Button onClick={handleExport} variant="outline" className="gap-2 shrink-0 self-end sm:self-auto">
                 <Download className="w-4 h-4" /> Export
