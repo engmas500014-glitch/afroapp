@@ -31,6 +31,17 @@ const toNumber = (v: string) => {
   return isNaN(n) ? 0 : n;
 };
 
+// Build a column-finder for a header row. Prefers an exact match, then
+// startsWith, then a loose "includes" — otherwise e.g. "ot" would wrongly
+// match "total net".
+const makeCol = (header: string[]) => (names: string[]) => {
+  let i = header.findIndex((h) => names.some((n) => h === n));
+  if (i !== -1) return i;
+  i = header.findIndex((h) => names.some((n) => h.startsWith(n)));
+  if (i !== -1) return i;
+  return header.findIndex((h) => names.some((n) => h.includes(n)));
+};
+
 export interface SalaryImportResult {
   error?: string;
   overrides: Record<string, SalaryRecord>;
@@ -54,15 +65,7 @@ export function parseSalaryImport(
   if (rows.length < 2) return { ...empty, error: "الملف فاضي أو مفيهوش بيانات." };
 
   const header = rows[0].map((h) => h.trim().toLowerCase());
-  // Prefer an exact header match, then startsWith, then a loose "includes" as a
-  // last resort — otherwise "ot" would wrongly match "total net".
-  const col = (names: string[]) => {
-    let i = header.findIndex((h) => names.some((n) => h === n));
-    if (i !== -1) return i;
-    i = header.findIndex((h) => names.some((n) => h.startsWith(n)));
-    if (i !== -1) return i;
-    return header.findIndex((h) => names.some((n) => h.includes(n)));
-  };
+  const col = makeCol(header);
   const iHr = col(["hr code", "hr_code", "hrcode"]);
   const iSalary = col(["salary (net)", "gross salary", "salary"]);
   const iOt = col(["ot (net)", "overtime", "ot"]);
@@ -108,4 +111,60 @@ export function parseSalaryImport(
   }
 
   return { overrides, salaryUpdates, matched, unmatched };
+}
+
+export interface GrossImportResult {
+  error?: string;
+  updates: Map<string, Partial<Employee>>; // employeeId -> employee field updates
+  matched: number;
+  unmatched: number;
+}
+
+// Parse an exported Gross Salaries CSV and produce employee field updates
+// (base salary, social insurance, taxes, medical), matching rows by HR Code.
+export function parseGrossImport(
+  csvText: string,
+  employees: Employee[],
+): GrossImportResult {
+  const empty: GrossImportResult = { updates: new Map(), matched: 0, unmatched: 0 };
+
+  const rows = parseCsv(csvText);
+  if (rows.length < 2) return { ...empty, error: "الملف فاضي أو مفيهوش بيانات." };
+
+  const header = rows[0].map((h) => h.trim().toLowerCase());
+  const col = makeCol(header);
+  const iHr = col(["hr code", "hr_code", "hrcode"]);
+  const iNet = col(["salary (net)", "salary"]);
+  const iSiEmp = col(["social ins. employee", "social ins employee", "social insurance employee"]);
+  const iSiComp = col(["social ins. company", "social ins company", "social insurance company"]);
+  const iTaxes = col(["taxes", "tax"]);
+  const iMedical = col(["medical"]);
+
+  if (iHr === -1) return { ...empty, error: "الملف لازم يكون فيه عمود HR Code." };
+
+  const byHr = new Map<string, Employee>(
+    employees.map((emp) => [String(emp.hrCode || "").trim().toLowerCase(), emp]),
+  );
+
+  let matched = 0;
+  let unmatched = 0;
+  const updates = new Map<string, Partial<Employee>>();
+
+  for (let r = 1; r < rows.length; r++) {
+    const row = rows[r];
+    const hr = String(row[iHr] || "").trim().toLowerCase();
+    const emp = hr ? byHr.get(hr) : undefined;
+    if (!emp) { unmatched++; continue; }
+    matched++;
+
+    const patch: Partial<Employee> = {};
+    if (iNet >= 0) patch.netSalary = toNumber(row[iNet]);
+    if (iSiEmp >= 0) patch.socialInsuranceEmployee = toNumber(row[iSiEmp]);
+    if (iSiComp >= 0) patch.socialInsuranceCompany = toNumber(row[iSiComp]);
+    if (iTaxes >= 0) patch.taxes = toNumber(row[iTaxes]);
+    if (iMedical >= 0) patch.medical = toNumber(row[iMedical]);
+    updates.set(emp.id, patch);
+  }
+
+  return { updates, matched, unmatched };
 }

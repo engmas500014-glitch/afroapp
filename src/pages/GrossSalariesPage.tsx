@@ -3,6 +3,7 @@ import { Card, CardHeader, CardTitle, Button, Input } from "../components/ui";
 import { useAppContext, Employee } from "../store/AppContext";
 import { Search, Download, Upload } from "lucide-react";
 import { cn, parseFlexibleDate } from "../lib/utils";
+import { parseGrossImport } from "../lib/salaryImport";
 
 const formatVal = (val: number | undefined | null) => {
   if (!val) return "-";
@@ -99,53 +100,32 @@ export function GrossSalariesPage() {
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file later
     if (!file) return;
 
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
-        const csv = event.target?.result as string;
-        const lines = csv.split('\n');
-        if (lines.length < 2) return;
-        
-        const newEmployees = [...employees];
-        
-        for (let i = 1; i < lines.length; i++) {
-          const line = lines[i].trim();
-          if (!line) continue;
-          
-          const values = line.split(',').map(v => v.replace(/^"|"$/g, '').trim());
-          if (values.length < 9) continue;
-          
-          // "Employee", "HR Code", "Position", "Salary (Net)", "Social Ins. Employee", "Social Ins. Company", "Taxes", "Medical", "Final Gross Salary"
-          const hrCode = values[1];
-          const netSalary = parseFloat(values[3]) || 0;
-          const siEmp = parseFloat(values[4]) || 0;
-          const siComp = parseFloat(values[5]) || 0;
-          const taxes = parseFloat(values[6]) || 0;
-          const medical = parseFloat(values[7]) || 0;
-          
-          const empIndex = newEmployees.findIndex(e => e.hrCode === hrCode);
-          if (empIndex >= 0) {
-            newEmployees[empIndex] = {
-              ...newEmployees[empIndex],
-              netSalary,
-              socialInsuranceEmployee: siEmp,
-              socialInsuranceCompany: siComp,
-              taxes,
-              medical
-            };
-          }
+        const res = parseGrossImport(String(event.target?.result || ""), employees);
+        if (res.error) {
+          alert(res.error);
+          return;
         }
-        setEmployees(newEmployees);
-        alert("Gross Salaries imported successfully.");
+        setEmployees((prev) =>
+          prev.map((emp) =>
+            res.updates.has(emp.id) ? { ...emp, ...res.updates.get(emp.id)! } : emp,
+          ),
+        );
+        alert(
+          `تم استيراد ${res.matched} موظف` +
+            (res.unmatched ? ` — ${res.unmatched} صف مش متطابق` : ""),
+        );
       } catch (error) {
         console.error("Error parsing CSV", error);
-        alert("Error reading file.");
+        alert("فشل قراءة الملف. تأكد إنه ملف CSV صحيح.");
       }
     };
     reader.readAsText(file);
-    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleExport = () => {
