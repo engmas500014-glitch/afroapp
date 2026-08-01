@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   Card,
   CardHeader,
@@ -11,6 +11,7 @@ import { useAppContext, Employee, SalaryRecord } from "../store/AppContext";
 import {
   Settings2,
   Download,
+  Upload,
   X,
   Search,
   Trash2,
@@ -31,8 +32,10 @@ export function SalariesPage() {
     permissions,
     salaryOverrides,
     setSalaryOverrides,
+    setEmployees,
     projectManagers,
   } = useAppContext();
+  const importInputRef = useRef<HTMLInputElement>(null);
   const [selectedMonth, setSelectedMonth] = useState("Jan");
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [searchTerm, setSearchTerm] = useState("");
@@ -401,6 +404,128 @@ export function SalariesPage() {
     );
   });
 
+  // Minimal CSV parser that understands quoted fields (matches the Export format).
+  const parseCsv = (text: string): string[][] => {
+    const rows: string[][] = [];
+    let field = "";
+    let row: string[] = [];
+    let inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (inQuotes) {
+        if (c === '"') {
+          if (text[i + 1] === '"') { field += '"'; i++; }
+          else inQuotes = false;
+        } else field += c;
+      } else if (c === '"') inQuotes = true;
+      else if (c === ",") { row.push(field); field = ""; }
+      else if (c === "\n" || c === "\r") {
+        if (c === "\r" && text[i + 1] === "\n") i++;
+        row.push(field); field = "";
+        if (row.some((x) => x !== "")) rows.push(row);
+        row = [];
+      } else field += c;
+    }
+    if (field !== "" || row.length) { row.push(field); if (row.some((x) => x !== "")) rows.push(row); }
+    return rows;
+  };
+
+  const toNumber = (v: string) => {
+    const n = parseFloat(String(v).replace(/[^0-9.\-]/g, ""));
+    return isNaN(n) ? 0 : n;
+  };
+
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file later
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const rows = parseCsv(String(reader.result || ""));
+        if (rows.length < 2) {
+          showNotification("الملف فاضي أو مفيهوش بيانات.", "error");
+          return;
+        }
+        const header = rows[0].map((h) => h.trim().toLowerCase());
+        const col = (names: string[]) =>
+          header.findIndex((h) => names.some((n) => h.includes(n)));
+        const iHr = col(["hr code", "hr_code", "hrcode"]);
+        const iName = col(["employee", "name"]);
+        const iSalary = col(["salary (net)", "salary"]);
+        const iOt = col(["ot (net)", "ot", "overtime"]);
+        const iHero = col(["top hero", "hero"]);
+        const iGift = col(["gift"]);
+        const iRetro = col(["retro"]);
+        const iMobile = col(["mobile"]);
+
+        if (iHr === -1 && iName === -1) {
+          showNotification("مفيش عمود HR Code ولا Employee في الملف.", "error");
+          return;
+        }
+
+        const byHr = new Map<string, Employee>(
+          employees.map((emp) => [String(emp.hrCode || "").trim().toLowerCase(), emp]),
+        );
+        const byName = new Map<string, Employee>(
+          employees.map((emp) => [String(emp.name || "").trim().toLowerCase(), emp]),
+        );
+
+        let matched = 0;
+        let unmatched = 0;
+        const nextOverrides = { ...salaryOverrides };
+        const salaryUpdates = new Map<string, number>();
+
+        for (let r = 1; r < rows.length; r++) {
+          const row = rows[r];
+          const hr = iHr >= 0 ? String(row[iHr] || "").trim().toLowerCase() : "";
+          const nm = iName >= 0 ? String(row[iName] || "").trim().toLowerCase() : "";
+          const emp = (hr && byHr.get(hr)) || (nm && byName.get(nm));
+          if (!emp) { unmatched++; continue; }
+          matched++;
+
+          const key = `${emp.id}_${selectedMonth}_${selectedYear}`;
+          const prev = nextOverrides[key] || ({} as SalaryRecord);
+          nextOverrides[key] = {
+            ...prev,
+            ot: iOt >= 0 ? toNumber(row[iOt]) : prev.ot || 0,
+            bonus: prev.bonus || 0,
+            topHero: iHero >= 0 ? toNumber(row[iHero]) : prev.topHero || 0,
+            gift: iGift >= 0 ? toNumber(row[iGift]) : prev.gift || 0,
+            retro: iRetro >= 0 ? toNumber(row[iRetro]) : prev.retro || 0,
+            mobile: iMobile >= 0 ? toNumber(row[iMobile]) : prev.mobile ?? 334.21,
+          };
+
+          if (iSalary >= 0) {
+            const s = toNumber(row[iSalary]);
+            if (s > 0) salaryUpdates.set(emp.id, s);
+          }
+        }
+
+        setSalaryOverrides(nextOverrides);
+        if (salaryUpdates.size > 0) {
+          setEmployees((prev) =>
+            prev.map((emp) =>
+              salaryUpdates.has(emp.id)
+                ? { ...emp, netSalary: salaryUpdates.get(emp.id)! }
+                : emp,
+            ),
+          );
+        }
+
+        showNotification(
+          `تم استيراد ${matched} موظف لشهر ${selectedMonth} ${selectedYear}` +
+            (unmatched ? ` — ${unmatched} صف مش متطابق` : ""),
+          matched > 0 ? "success" : "error",
+        );
+      } catch (err) {
+        showNotification("فشل قراءة الملف. تأكد إنه ملف CSV صحيح.", "error");
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const handleExport = () => {
     if (filteredEmployees.length === 0) return;
 
@@ -476,6 +601,20 @@ export function SalariesPage() {
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
+          {canEdit && (
+            <>
+              <input
+                ref={importInputRef}
+                type="file"
+                accept=".csv,text/csv"
+                className="hidden"
+                onChange={handleImportFile}
+              />
+              <Button variant="outline" onClick={() => importInputRef.current?.click()}>
+                <Upload className="w-4 h-4 mr-2" /> Import
+              </Button>
+            </>
+          )}
           {canExport && (
             <Button variant="outline" onClick={handleExport}>
               <Download className="w-4 h-4 mr-2" /> Export
