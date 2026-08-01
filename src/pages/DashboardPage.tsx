@@ -19,11 +19,14 @@ import { parseFlexibleDate } from "../lib/utils";
 export function DashboardPage() {
   const { visibleEmployees: employees, visiblePoBudgets: poBudgets, salaryOverrides, safetyRecords, poAcceptances } = useAppContext();
 
-  // Dynamic selector states
+  // Filter options are built from the employees the cost figures come from —
+  // poBudgets is often empty, which used to leave these dropdowns with no options.
   const uniqueAccounts = Array.from(
-    new Set([
-      ...poBudgets.map((p) => p.account)
-    ].filter(Boolean)),
+    new Set(
+      [...employees.map((e) => e.account), ...poBudgets.map((p) => p.account)].filter(
+        (v): v is string => Boolean(v),
+      ),
+    ),
   ).sort();
 
   const [selectedAccount, setSelectedAccount] = React.useState<string>("All");
@@ -31,11 +34,15 @@ export function DashboardPage() {
 
   const uniqueProjects = Array.from(
     new Set(
-      poBudgets
-        .filter((p) => selectedAccount === "All" || p.account === selectedAccount)
-        .map((p) => p.project)
-        .filter(Boolean)
-    )
+      [
+        ...employees
+          .filter((e) => selectedAccount === "All" || e.account === selectedAccount)
+          .map((e) => e.project),
+        ...poBudgets
+          .filter((p) => selectedAccount === "All" || p.account === selectedAccount)
+          .map((p) => p.project),
+      ].filter((v): v is string => Boolean(v)),
+    ),
   ).sort();
 
   const availableYears: number[] = Array.from(new Set(poBudgets.map((b) => Number(b.year))));
