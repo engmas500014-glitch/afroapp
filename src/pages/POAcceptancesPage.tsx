@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Card, CardHeader, CardTitle, Button, Input } from "../components/ui";
 import { useAppContext, POAcceptance } from "../store/AppContext";
-import { Plus, Trash2, Save, ChevronDown, ChevronRight, AlertTriangle, AlertCircle, X, Search, Edit2, Eye, Download, List } from "lucide-react";
+import { Plus, Trash2, Save, ChevronDown, ChevronRight, AlertTriangle, AlertCircle, X, Search, Edit2, Eye, Download, Upload, List } from "lucide-react";
+import { parseCsv } from "../lib/salaryImport";
 
 export function POAcceptancesPage() {
   const { poAcceptances, setPoAcceptances, employees, salaryOverrides, safetyRecords, user, permissions } = useAppContext();
@@ -136,6 +137,107 @@ export function POAcceptancesPage() {
   const currentRecords = poAcceptances.filter(
     (r) => r.month === selectedMonth && r.year === selectedYear
   );
+
+  const importInputRef = useRef<HTMLInputElement>(null);
+
+  // Convert mm/dd/yyyy (the UI's display format) to the yyyy-mm-dd the date
+  // inputs need; leave already-ISO or unknown values as-is.
+  const normDate = (v: string): string => {
+    const s = String(v || "").trim();
+    if (!s) return "";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (m) return `${m[3]}-${m[1].padStart(2, "0")}-${m[2].padStart(2, "0")}`;
+    return s;
+  };
+
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file later
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const rows = parseCsv(String(reader.result || ""));
+        if (rows.length < 2) {
+          alert("الملف فاضي أو مفيهوش بيانات.");
+          return;
+        }
+        const header = rows[0].map((h) => h.trim().toLowerCase());
+        const col = (names: string[]) => {
+          let i = header.findIndex((h) => names.some((n) => h === n));
+          if (i !== -1) return i;
+          i = header.findIndex((h) => names.some((n) => h.startsWith(n)));
+          if (i !== -1) return i;
+          return header.findIndex((h) => names.some((n) => h.includes(n)));
+        };
+        const iPo = col(["po number", "po_number"]);
+        const iGrnNo = col(["grn number", "grn no"]);
+        const iGrnDate = col(["grn date"]);
+        const iInvNo = col(["invoice no", "invoice number"]);
+        const iInvDate = col(["invoice date"]);
+        const iColDate = col(["collect date"]);
+        const iColState = col(["collect state"]);
+
+        if (iPo === -1) {
+          alert("الملف لازم يكون فيه عمود PO Number.");
+          return;
+        }
+
+        // First non-empty row per PO wins; only non-empty cells are applied so
+        // an import fills/updates values without wiping existing ones.
+        const patches = new Map<string, Partial<POAcceptance>>();
+        for (let r = 1; r < rows.length; r++) {
+          const row = rows[r];
+          const po = String(row[iPo] || "").trim();
+          if (!po || patches.has(po)) continue;
+          const patch: Partial<POAcceptance> = {};
+          const grnNo = iGrnNo >= 0 ? String(row[iGrnNo] || "").trim() : "";
+          const grnDate = iGrnDate >= 0 ? normDate(row[iGrnDate]) : "";
+          const invNo = iInvNo >= 0 ? String(row[iInvNo] || "").trim() : "";
+          const invDate = iInvDate >= 0 ? normDate(row[iInvDate]) : "";
+          const colDate = iColDate >= 0 ? normDate(row[iColDate]) : "";
+          const colState = iColState >= 0 ? String(row[iColState] || "").trim() : "";
+          if (grnNo) patch.grnNumber = grnNo;
+          if (grnDate) patch.grnDate = grnDate;
+          if (invNo) patch.invoiceNo = invNo;
+          if (invDate) patch.invoiceDate = invDate;
+          if (colDate) patch.collectDate = colDate;
+          if (colState) patch.collectState = colState;
+          if (Object.keys(patch).length > 0) patches.set(po, patch);
+        }
+
+        const existing = new Set(
+          poAcceptances
+            .filter((r) => r.month === selectedMonth && r.year === selectedYear && r.poNumber)
+            .map((r) => r.poNumber),
+        );
+        let matched = 0;
+        let unmatched = 0;
+        patches.forEach((_, po) => (existing.has(po) ? matched++ : unmatched++));
+
+        setPoAcceptances((prev) =>
+          prev.map((rec) =>
+            rec.month === selectedMonth &&
+            rec.year === selectedYear &&
+            rec.poNumber &&
+            patches.has(rec.poNumber)
+              ? { ...rec, ...patches.get(rec.poNumber)! }
+              : rec,
+          ),
+        );
+
+        alert(
+          `تم تحديث ${matched} أمر شراء لشهر ${selectedMonth} ${selectedYear}` +
+            (unmatched ? ` — ${unmatched} PO مش موجود في الشهر ده` : ""),
+        );
+      } catch (err) {
+        alert("فشل قراءة الملف. تأكد إنه ملف CSV صحيح.");
+      }
+    };
+    reader.readAsText(file);
+  };
 
   const handleExport = () => {
     if (filteredRecords.length === 0) return;
@@ -957,6 +1059,20 @@ export function POAcceptancesPage() {
                   </span>
                 )}
               </Button>
+              {canManage && (
+                <>
+                  <input
+                    ref={importInputRef}
+                    type="file"
+                    accept=".csv,text/csv"
+                    className="hidden"
+                    onChange={handleImportFile}
+                  />
+                  <Button onClick={() => importInputRef.current?.click()} size="sm" variant="outline" className="gap-2">
+                    <Upload className="w-4 h-4" /> Import
+                  </Button>
+                </>
+              )}
               {canExport && (
                 <Button onClick={handleExport} size="sm" variant="outline" className="gap-2" disabled={filteredRecords.length === 0}>
                   <Download className="w-4 h-4" /> Export
