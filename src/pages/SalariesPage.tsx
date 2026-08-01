@@ -449,12 +449,19 @@ export function SalariesPage() {
           return;
         }
         const header = rows[0].map((h) => h.trim().toLowerCase());
-        const col = (names: string[]) =>
-          header.findIndex((h) => names.some((n) => h.includes(n)));
+        // Prefer an exact header match, then startsWith, then a loose "includes"
+        // as a last resort — otherwise "ot" would wrongly match "total net".
+        const col = (names: string[]) => {
+          let i = header.findIndex((h) => names.some((n) => h === n));
+          if (i !== -1) return i;
+          i = header.findIndex((h) => names.some((n) => h.startsWith(n)));
+          if (i !== -1) return i;
+          return header.findIndex((h) => names.some((n) => h.includes(n)));
+        };
         const iHr = col(["hr code", "hr_code", "hrcode"]);
         const iSalary = col(["salary (net)", "salary"]);
-        const iOt = col(["ot (net)", "ot", "overtime"]);
-        const iHero = col(["top hero", "hero"]);
+        const iOt = col(["ot (net)", "overtime", "ot"]);
+        const iHero = col(["top hero bonus", "top hero", "hero"]);
         const iGift = col(["gift"]);
         const iRetro = col(["retro"]);
         const iMobile = col(["mobile"]);
