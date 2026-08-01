@@ -31,6 +31,14 @@ const toNumber = (v: string) => {
   return isNaN(n) ? 0 : n;
 };
 
+// Split a PO cell into a list. Export joins multiple values with " | ";
+// also accept commas. "-" or empty means no values.
+const splitList = (v: string): string[] => {
+  const s = String(v || "").trim();
+  if (!s || s === "-") return [];
+  return s.split(/\||,/).map((x) => x.trim()).filter(Boolean);
+};
+
 // Build a column-finder for a header row. Prefers an exact match, then
 // startsWith, then a loose "includes" — otherwise e.g. "ot" would wrongly
 // match "total net".
@@ -67,12 +75,15 @@ export function parseSalaryImport(
   const header = rows[0].map((h) => h.trim().toLowerCase());
   const col = makeCol(header);
   const iHr = col(["hr code", "hr_code", "hrcode"]);
-  const iSalary = col(["salary (net)", "gross salary", "salary"]);
+  // Only the true net salary column — never "gross salary" (a computed total).
+  const iSalary = col(["salary (net)", "salary(net)", "net salary"]);
   const iOt = col(["ot (net)", "overtime", "ot"]);
   const iHero = col(["top hero bonus", "top hero", "hero"]);
   const iGift = col(["gift"]);
   const iRetro = col(["retro"]);
   const iMobile = col(["mobile"]);
+  const iPo = col(["po number", "po_number", "ponumber"]);
+  const iPoReq = col(["po amount request", "po amount", "po_amount_request"]);
 
   if (iHr === -1) return { ...empty, error: "الملف لازم يكون فيه عمود HR Code." };
 
@@ -94,7 +105,7 @@ export function parseSalaryImport(
 
     const key = `${emp.id}_${month}_${year}`;
     const prev = overrides[key] || ({} as SalaryRecord);
-    overrides[key] = {
+    const next: SalaryRecord = {
       ...prev,
       ot: iOt >= 0 ? toNumber(row[iOt]) : prev.ot || 0,
       bonus: prev.bonus || 0,
@@ -103,6 +114,10 @@ export function parseSalaryImport(
       retro: iRetro >= 0 ? toNumber(row[iRetro]) : prev.retro || 0,
       mobile: iMobile >= 0 ? toNumber(row[iMobile]) : prev.mobile ?? 334.21,
     };
+    // PO fields are stored as string lists; the export joins them with " | ".
+    if (iPo >= 0) next.poNumbers = splitList(row[iPo]);
+    if (iPoReq >= 0) next.poAmountRequests = splitList(row[iPoReq]);
+    overrides[key] = next;
 
     if (iSalary >= 0) {
       const s = toNumber(row[iSalary]);
@@ -134,7 +149,7 @@ export function parseGrossImport(
   const header = rows[0].map((h) => h.trim().toLowerCase());
   const col = makeCol(header);
   const iHr = col(["hr code", "hr_code", "hrcode"]);
-  const iNet = col(["salary (net)", "salary"]);
+  const iNet = col(["salary (net)", "salary(net)", "net salary"]);
   const iSiEmp = col(["social ins. employee", "social ins employee", "social insurance employee"]);
   const iSiComp = col(["social ins. company", "social ins company", "social insurance company"]);
   const iTaxes = col(["taxes", "tax"]);

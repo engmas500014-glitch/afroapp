@@ -392,25 +392,27 @@ export function CostPage() {
                 className="pl-9 bg-input-bg w-full"
               />
             </div>
-            {canEdit && (
-              <>
-                <input
-                  ref={importInputRef}
-                  type="file"
-                  accept=".csv,text/csv"
-                  className="hidden"
-                  onChange={handleImportFile}
-                />
-                <Button onClick={() => importInputRef.current?.click()} variant="outline" className="gap-2 shrink-0 self-end sm:self-auto">
-                  <Upload className="w-4 h-4" /> Import
+            <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+              {canEdit && (
+                <>
+                  <input
+                    ref={importInputRef}
+                    type="file"
+                    accept=".csv,text/csv"
+                    className="hidden"
+                    onChange={handleImportFile}
+                  />
+                  <Button onClick={() => importInputRef.current?.click()} variant="outline" className="gap-2">
+                    <Upload className="w-4 h-4" /> Import
+                  </Button>
+                </>
+              )}
+              {canExport && (
+                <Button onClick={handleExport} variant="outline" className="gap-2">
+                  <Download className="w-4 h-4" /> Export
                 </Button>
-              </>
-            )}
-            {canExport && (
-              <Button onClick={handleExport} variant="outline" className="gap-2 shrink-0 self-end sm:self-auto">
-                <Download className="w-4 h-4" /> Export
-              </Button>
-            )}
+              )}
+            </div>
           </div>
         </CardHeader>
         <div className="overflow-x-auto max-h-[600px] no-scrollbar">
