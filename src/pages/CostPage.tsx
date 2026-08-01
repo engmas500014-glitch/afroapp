@@ -124,11 +124,15 @@ export function CostPage() {
     if (resignDateLocal && !isNaN(resignDateLocal.getTime()) && resignDateLocal < startOfSelectedMonth) return false;
 
     const term = searchTerm.toLowerCase();
+    const poNumbers = (salaryOverrides[`${e.id}_${selectedMonth}_${selectedYear}`]?.poNumbers || [])
+      .join(" ")
+      .toLowerCase();
     return (
       e.name.toLowerCase().includes(term) ||
       e.id.toLowerCase().includes(term) ||
       (e.hrCode && e.hrCode.toLowerCase().includes(term)) ||
-      e.position.toLowerCase().includes(term)
+      e.position.toLowerCase().includes(term) ||
+      poNumbers.includes(term)
     );
   });
 
@@ -386,7 +390,7 @@ export function CostPage() {
             <div className="relative flex-1 max-w-md w-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-fg" />
               <Input
-                placeholder="Search employees..."
+                placeholder="Search by name, HR code, position, or PO number..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-9 bg-input-bg w-full"
