@@ -140,15 +140,33 @@ export function POAcceptancesPage() {
 
   const importInputRef = useRef<HTMLInputElement>(null);
 
-  // Convert mm/dd/yyyy (the UI's display format) to the yyyy-mm-dd the date
-  // inputs need; leave already-ISO or unknown values as-is.
-  const normDate = (v: string): string => {
+  // Excel writes blanks as 0 and failed lookups as #N/A; treat both as empty.
+  const isBlankCell = (v: string) => {
     const s = String(v || "").trim();
+    return !s || s === "0" || s.toUpperCase() === "#N/A";
+  };
+
+  const normText = (v: string): string => (isBlankCell(v) ? "" : String(v).trim());
+
+  // Normalize a date cell to the yyyy-mm-dd the date inputs need. Handles ISO,
+  // mm/dd/yyyy, and Excel serial numbers (e.g. 46174), which is what Excel
+  // leaves behind after opening and re-saving an exported CSV.
+  const normDate = (v: string): string => {
+    const s = normText(v);
     if (!s) return "";
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    if (/^\d{4,6}(\.\d+)?$/.test(s)) {
+      const serial = Math.floor(Number(s));
+      // Excel day 0 is 1899-12-30; guard against unrelated numbers.
+      if (serial > 20000 && serial < 80000) {
+        return new Date(Date.UTC(1899, 11, 30) + serial * 86400000)
+          .toISOString()
+          .slice(0, 10);
+      }
+    }
     const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
     if (m) return `${m[3]}-${m[1].padStart(2, "0")}-${m[2].padStart(2, "0")}`;
-    return s;
+    return ""; // unknown format — better to skip than write junk
   };
 
   const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -173,6 +191,7 @@ export function POAcceptancesPage() {
           return header.findIndex((h) => names.some((n) => h.includes(n)));
         };
         const iPo = col(["po number", "po_number"]);
+        const iTotal = col(["total po amount", "total po"]);
         const iGrnNo = col(["grn number", "grn no"]);
         const iGrnDate = col(["grn date"]);
         const iInvNo = col(["invoice no", "invoice number"]);
@@ -188,17 +207,26 @@ export function POAcceptancesPage() {
         // First non-empty row per PO wins; only non-empty cells are applied so
         // an import fills/updates values without wiping existing ones.
         const patches = new Map<string, Partial<POAcceptance>>();
+        const poTotals = new Map<string, number>();
         for (let r = 1; r < rows.length; r++) {
           const row = rows[r];
-          const po = String(row[iPo] || "").trim();
-          if (!po || patches.has(po)) continue;
+          const po = normText(row[iPo]);
+          if (!po) continue;
+
+          if (iTotal >= 0 && !poTotals.has(po)) {
+            const raw = normText(row[iTotal]).replace(/[^0-9.\-]/g, "");
+            const amount = parseFloat(raw);
+            if (!isNaN(amount) && amount > 0) poTotals.set(po, amount);
+          }
+
+          if (patches.has(po)) continue;
           const patch: Partial<POAcceptance> = {};
-          const grnNo = iGrnNo >= 0 ? String(row[iGrnNo] || "").trim() : "";
+          const grnNo = iGrnNo >= 0 ? normText(row[iGrnNo]) : "";
           const grnDate = iGrnDate >= 0 ? normDate(row[iGrnDate]) : "";
-          const invNo = iInvNo >= 0 ? String(row[iInvNo] || "").trim() : "";
+          const invNo = iInvNo >= 0 ? normText(row[iInvNo]) : "";
           const invDate = iInvDate >= 0 ? normDate(row[iInvDate]) : "";
           const colDate = iColDate >= 0 ? normDate(row[iColDate]) : "";
-          const colState = iColState >= 0 ? String(row[iColState] || "").trim() : "";
+          const colState = iColState >= 0 ? normText(row[iColState]) : "";
           if (grnNo) patch.grnNumber = grnNo;
           if (grnDate) patch.grnDate = grnDate;
           if (invNo) patch.invoiceNo = invNo;
@@ -217,19 +245,38 @@ export function POAcceptancesPage() {
         let unmatched = 0;
         patches.forEach((_, po) => (existing.has(po) ? matched++ : unmatched++));
 
-        setPoAcceptances((prev) =>
-          prev.map((rec) =>
+        setPoAcceptances((prev) => {
+          // 1. Per-row fields, for the selected month only.
+          let next = prev.map((rec) =>
             rec.month === selectedMonth &&
             rec.year === selectedYear &&
             rec.poNumber &&
             patches.has(rec.poNumber)
               ? { ...rec, ...patches.get(rec.poNumber)! }
               : rec,
-          ),
-        );
+          );
+
+          // 2. Total PO Amount is a per-PO total across all months: store it on
+          // the first record of that PO and clear the duplicates, matching what
+          // the Edit Total PO Amount dialog does.
+          poTotals.forEach((amount, po) => {
+            let firstFound = false;
+            next = next.map((rec) => {
+              if (rec.poNumber !== po) return rec;
+              if (!firstFound) {
+                firstFound = true;
+                return { ...rec, amountPo: amount };
+              }
+              return { ...rec, amountPo: undefined as any };
+            });
+          });
+
+          return next;
+        });
 
         alert(
           `تم تحديث ${matched} أمر شراء لشهر ${selectedMonth} ${selectedYear}` +
+            (poTotals.size ? ` — و${poTotals.size} إجمالي PO` : "") +
             (unmatched ? ` — ${unmatched} PO مش موجود في الشهر ده` : ""),
         );
       } catch (err) {
