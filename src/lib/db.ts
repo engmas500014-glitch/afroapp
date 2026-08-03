@@ -1,42 +1,57 @@
 import { supabase } from './supabase';
 import { Employee, SafetyRecord, AccountItem, POBudget, SalaryRecord, Escalation, PermissionNode, POAcceptance, ProjectConfig, User } from '../store/AppContext';
 
-export const loadDataFromSupabase = async () => {
-  // Always order by id: Postgres gives no row order without ORDER BY, and it
-  // shifts after updates. PO cost apportionment consumes each PO's capacity in
-  // employee order, so an unstable order made the figures change on refresh.
-  const results = await Promise.all([
-    supabase.from('employees').select('*').order('id'),
-    supabase.from('safety_records').select('*').order('id'),
-    supabase.from('accounts').select('*').order('id'),
-    supabase.from('po_budgets').select('*').order('id'),
-    supabase.from('salary_records').select('*').order('id'),
-    supabase.from('escalations').select('*').order('id'),
-    supabase.from('permissions').select('*').order('id'),
-    supabase.from('po_acceptances').select('*').order('id'),
-    supabase.from('fin_config').select('*').order('id'),
-    supabase.from('users').select('*').order('id')
-  ]);
-
-  results.forEach((res, i) => {
-    if (res.error) {
-      console.warn(`Error loading table ${i}:`, res.error);
-      throw new Error(`Error loading table ${i}: ${res.error.message}`);
+// Read every row of a table, page by page.
+//
+// A plain select() is capped by PostgREST's max-rows (1000 here), and it
+// returns no defined row order without ORDER BY. Both matter badly: a
+// truncated load makes the app think the missing rows were deleted, and the
+// next sync removes them for real, while an unstable order changes how PO
+// costs are apportioned between refreshes.
+const fetchAllRows = async (tableName: string): Promise<any[]> => {
+  const pageSize = 1000;
+  const rows: any[] = [];
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await supabase
+      .from(tableName)
+      .select('*')
+      .order('id')
+      .range(from, from + pageSize - 1);
+    if (error) {
+      console.warn(`Error loading ${tableName}:`, error);
+      throw new Error(`Error loading ${tableName}: ${error.message}`);
     }
-  });
+    if (!data || data.length === 0) break;
+    rows.push(...data);
+    if (data.length < pageSize) break;
+  }
+  return rows;
+};
 
+export const loadDataFromSupabase = async () => {
   const [
-    { data: employees },
-    { data: safetyRecords },
-    { data: accounts },
-    { data: poBudgets },
-    { data: salaryOverrides },
-    { data: escalations },
-    { data: permissions },
-    { data: poAcceptances },
-    { data: finConfig },
-    { data: users }
-  ] = results;
+    employees,
+    safetyRecords,
+    accounts,
+    poBudgets,
+    salaryOverrides,
+    escalations,
+    permissions,
+    poAcceptances,
+    finConfig,
+    users,
+  ] = await Promise.all([
+    fetchAllRows('employees'),
+    fetchAllRows('safety_records'),
+    fetchAllRows('accounts'),
+    fetchAllRows('po_budgets'),
+    fetchAllRows('salary_records'),
+    fetchAllRows('escalations'),
+    fetchAllRows('permissions'),
+    fetchAllRows('po_acceptances'),
+    fetchAllRows('fin_config'),
+    fetchAllRows('users'),
+  ]);
 
   const mappedEmployees = (employees || []).map(e => ({
     id: e.id,
