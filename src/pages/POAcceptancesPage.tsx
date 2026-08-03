@@ -573,9 +573,12 @@ export function POAcceptancesPage() {
     }
   });
 
-  const poEmployees: Record<string, { id: string; name: string; hrCode: string; account?: string; project?: string; cost: number }[]> = {};
+  type AllocatedEmployee = { id: string; name: string; hrCode: string; account?: string; project?: string; cost: number };
+  const poEmployees: Record<string, AllocatedEmployee[]> = {};
   const posUsedInSelectedMonth = new Set<string>();
   let unallocatedEmployeeCost = 0;
+  // Employees with no PO assigned this month — listed under the "No PO" row.
+  const unallocatedEmployees: AllocatedEmployee[] = [];
   
   const runningDispReqSum: Record<string, number> = {};
 
@@ -721,6 +724,16 @@ export function POAcceptancesPage() {
         if (!overrides.poNumbers || overrides.poNumbers.length === 0) {
           if (isSelectedMonth) {
             unallocatedEmployeeCost += totalCost;
+            if (totalCost > 0) {
+              unallocatedEmployees.push({
+                id: emp.id,
+                name: emp.name,
+                hrCode: emp.hrCode,
+                account: emp.account,
+                project: emp.project,
+                cost: totalCost,
+              });
+            }
           }
           return;
         }
@@ -1182,8 +1195,17 @@ export function POAcceptancesPage() {
                   </tr>
                 ) : (
                   filteredRecords.map((record) => {
-                    const mappedEmployees = record.poNumber ? (poEmployees[record.poNumber] || []) : [];
-                    const calculatedCostPo = record.poNumber ? (poCosts[record.poNumber] || 0) : 0;
+                    // A row with no PO number (blank or "0") is the bucket for
+                    // employees who have not been assigned a PO this month.
+                    const poNum = String(record.poNumber || "").trim();
+                    const isUnallocatedRow = poNum === "" || poNum === "0";
+
+                    const mappedEmployees = isUnallocatedRow
+                      ? unallocatedEmployees
+                      : (poEmployees[record.poNumber] || []);
+                    const calculatedCostPo = isUnallocatedRow
+                      ? unallocatedEmployeeCost
+                      : (record.poNumber ? (poCosts[record.poNumber] || 0) : 0);
                     const calculatedPoAmountRequest = record.poNumber ? (poAmountRequestsMap[record.poNumber] || 0) : 0;
                     const manualPoAmountRequest = record.poNumber ? (manualSelectedReqs[record.poNumber]) : undefined;
                     const targetPoAmountRequest = manualPoAmountRequest !== undefined ? manualPoAmountRequest : calculatedPoAmountRequest;
@@ -1192,9 +1214,15 @@ export function POAcceptancesPage() {
                     const globalAmount = poAcceptances
                       .filter(r => r.poNumber === record.poNumber)
                       .reduce((sum, r) => sum + (Number(r.amountPo) || 0), 0);
-                    const globalCost = record.poNumber ? (globalPoCosts[record.poNumber] || 0) : 0;
+                    const globalCost = isUnallocatedRow
+                      ? unallocatedEmployeeCost
+                      : (record.poNumber ? (globalPoCosts[record.poNumber] || 0) : 0);
 
-                    const calculatedBalancePo = globalAmount - (cumReqs[record.poNumber] || 0) - displayPoAmountRequest;
+                    // There is no PO to draw against on the unallocated row, so
+                    // a balance would just be the cost negated — show nothing.
+                    const calculatedBalancePo = isUnallocatedRow
+                      ? 0
+                      : globalAmount - (cumReqs[record.poNumber] || 0) - displayPoAmountRequest;
 
                     const isExpanded = expandedRows[record.id] || false;
                     const toggleExpanded = () => setExpandedRows((prev) => ({ ...prev, [record.id]: !prev[record.id] }));
@@ -1216,8 +1244,8 @@ export function POAcceptancesPage() {
                           ) : (
                             <div className="w-6 shrink-0" />
                           )}
-                          <div className="h-8 text-xs flex-1 flex items-center justify-center px-3 rounded-md border border-border bg-muted/10 font-medium">
-                            {record.poNumber || "-"}
+                          <div className={`h-8 text-xs flex-1 flex items-center justify-center px-3 rounded-md border font-medium ${isUnallocatedRow ? "border-warning/40 bg-warning/10 text-warning" : "border-border bg-muted/10"}`}>
+                            {isUnallocatedRow ? "No PO" : record.poNumber}
                           </div>
                         </div>
                       </td>
@@ -1306,7 +1334,9 @@ export function POAcceptancesPage() {
                       <tr className="bg-muted/10 border-b border-border/50">
                         <td colSpan={12} className="p-4 pl-14">
                           <div className="text-xs font-semibold text-muted-fg mb-3 uppercase tracking-wider">
-                            Employees Allocated to PO {record.poNumber}
+                            {isUnallocatedRow
+                              ? "Employees with no PO assigned"
+                              : `Employees Allocated to PO ${record.poNumber}`}
                           </div>
                           <div className="rounded-md border border-border bg-card-bg overflow-hidden inline-block min-w-[500px] shadow-sm">
                             <table className="w-full text-sm">
