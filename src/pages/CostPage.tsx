@@ -188,11 +188,11 @@ export function CostPage() {
           return;
         }
         setSalaryOverrides(res.overrides);
-        if (res.salaryUpdates.size > 0) {
+        if (res.employeeUpdates.size > 0) {
           setEmployees((prev) =>
             prev.map((emp) =>
-              res.salaryUpdates.has(emp.id)
-                ? { ...emp, netSalary: res.salaryUpdates.get(emp.id)! }
+              res.employeeUpdates.has(emp.id)
+                ? { ...emp, ...res.employeeUpdates.get(emp.id)! }
                 : emp,
             ),
           );
@@ -215,6 +215,7 @@ export function CostPage() {
       "Employee",
       "HR Code",
       "Position",
+      "Project",
       "PO Number",
       "PO Amount Request",
       "Gross Salary",
@@ -301,6 +302,7 @@ export function CostPage() {
         emp.name || "",
         emp.hrCode || "",
         emp.position || "",
+        emp.project || "",
         poNumbersStr,
         poAmountRequestsStr,
         gross || 0,

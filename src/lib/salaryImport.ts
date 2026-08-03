@@ -53,7 +53,7 @@ const makeCol = (header: string[]) => (names: string[]) => {
 export interface SalaryImportResult {
   error?: string;
   overrides: Record<string, SalaryRecord>;
-  salaryUpdates: Map<string, number>; // employeeId -> new base salary
+  employeeUpdates: Map<string, Partial<Employee>>; // employeeId -> employee field updates
   matched: number;
   unmatched: number;
 }
@@ -67,7 +67,7 @@ export function parseSalaryImport(
   month: string,
   year: number | string,
 ): SalaryImportResult {
-  const empty: SalaryImportResult = { overrides: currentOverrides, salaryUpdates: new Map(), matched: 0, unmatched: 0 };
+  const empty: SalaryImportResult = { overrides: currentOverrides, employeeUpdates: new Map(), matched: 0, unmatched: 0 };
 
   const rows = parseCsv(csvText);
   if (rows.length < 2) return { ...empty, error: "الملف فاضي أو مفيهوش بيانات." };
@@ -84,6 +84,7 @@ export function parseSalaryImport(
   const iMobile = col(["mobile"]);
   const iPo = col(["po number", "po_number", "ponumber"]);
   const iPoReq = col(["po amount request", "po amount", "po_amount_request"]);
+  const iProject = col(["project"]);
 
   if (iHr === -1) return { ...empty, error: "الملف لازم يكون فيه عمود HR Code." };
 
@@ -94,7 +95,7 @@ export function parseSalaryImport(
   let matched = 0;
   let unmatched = 0;
   const overrides = { ...currentOverrides };
-  const salaryUpdates = new Map<string, number>();
+  const employeeUpdates = new Map<string, Partial<Employee>>();
 
   for (let r = 1; r < rows.length; r++) {
     const row = rows[r];
@@ -119,13 +120,21 @@ export function parseSalaryImport(
     if (iPoReq >= 0) next.poAmountRequests = splitList(row[iPoReq]);
     overrides[key] = next;
 
+    // Employee-level fields; only non-empty cells are applied so an import
+    // never blanks out data the file happens not to carry.
+    const empPatch: Partial<Employee> = {};
     if (iSalary >= 0) {
       const s = toNumber(row[iSalary]);
-      if (s > 0) salaryUpdates.set(emp.id, s);
+      if (s > 0) empPatch.netSalary = s;
     }
+    if (iProject >= 0) {
+      const p = String(row[iProject] || "").trim();
+      if (p && p !== "-") empPatch.project = p;
+    }
+    if (Object.keys(empPatch).length > 0) employeeUpdates.set(emp.id, empPatch);
   }
 
-  return { overrides, salaryUpdates, matched, unmatched };
+  return { overrides, employeeUpdates, matched, unmatched };
 }
 
 export interface GrossImportResult {
