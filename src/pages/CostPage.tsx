@@ -287,8 +287,8 @@ export function CostPage() {
         (safetyData.firstAid || 0) + 
         (safetyData.ppe || 0);
 
-      const totalAllowance = ot + topHero + gift + retro;
-      const totalCost = gross + totalAllowance + mobile + totalSafetyAmount + totalOtherCost;
+      const totalAllowance = ot + topHero + gift + retro + mobile;
+      const totalCost = gross + totalAllowance + totalSafetyAmount + totalOtherCost;
 
       const poNumbersStr = (overrides.poNumbers && overrides.poNumbers.length > 0) 
         ? overrides.poNumbers.join(" | ") 
@@ -503,8 +503,8 @@ export function CostPage() {
                   const otherCostNet = overrides.otherCostNet !== undefined ? overrides.otherCostNet : 0;
                   const totalOtherCost = laptop + otherCostNet;
 
-                  const totalAllowance = ot + topHero + gift + retro;
-                  const totalCost = gross + totalAllowance + mobile + totalSafetyAmount + totalOtherCost;
+                  const totalAllowance = ot + topHero + gift + retro + mobile;
+                  const totalCost = gross + totalAllowance + totalSafetyAmount + totalOtherCost;
 
                   const isEditingPoNumber = editingField?.id === emp.id && editingField.field === 'poNumber';
                   const isEditingPoAmountRequest = editingField?.id === emp.id && editingField.field === 'poAmountRequest';
