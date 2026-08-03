@@ -3,6 +3,7 @@ import { Card, CardHeader, Input, Button } from "../components/ui";
 import { useAppContext } from "../store/AppContext";
 import { Search, Edit2, Check, X, Download, Upload } from "lucide-react";
 import { parseSalaryImport } from "../lib/salaryImport";
+import { currentMonthShort } from "../lib/utils";
 
 const formatVal = (val: number | undefined | null) => {
   if (!val) return "-";
@@ -27,7 +28,7 @@ export function CostPage() {
   const canEdit = hasPermission("Cost", "Manage Cost Data") || user?.role === "Admin" || user?.role === "HR" || user?.role === "Manager";
   const canExport = hasPermission("Cost", "Export Cost Page") || user?.role === "Admin" || user?.role === "HR" || user?.role === "Manager";
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedMonth, setSelectedMonth] = useState("Jan");
+  const [selectedMonth, setSelectedMonth] = useState(currentMonthShort());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [editingField, setEditingField] = useState<{ id: string, field: 'poNumber' | 'poAmountRequest' } | null>(null);
   const [tempPoNumber, setTempPoNumber] = useState("");

@@ -2,7 +2,7 @@ import React, { useState, useRef } from "react";
 import { Card, CardHeader, CardTitle, Button, Input } from "../components/ui";
 import { useAppContext, Employee } from "../store/AppContext";
 import { Search, Download, Upload } from "lucide-react";
-import { cn, parseFlexibleDate } from "../lib/utils";
+import { cn, parseFlexibleDate, currentMonthShort } from "../lib/utils";
 import { parseGrossImport } from "../lib/salaryImport";
 
 const formatVal = (val: number | undefined | null) => {
@@ -15,7 +15,7 @@ export function GrossSalariesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [selectedMonth, setSelectedMonth] = useState("Jan");
+  const [selectedMonth, setSelectedMonth] = useState(currentMonthShort());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
   const months = [

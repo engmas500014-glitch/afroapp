@@ -2,11 +2,12 @@ import React, { useState } from "react";
 import { Card, CardHeader, Input, Button } from "../components/ui";
 import { useAppContext, SafetyRecord } from "../store/AppContext";
 import { Search, ChevronDown, ChevronUp, AlertCircle, AlertTriangle, Download, Info, Mail, Phone } from "lucide-react";
+import { currentMonthShort } from "../lib/utils";
 
 export function SafetyPage() {
   const { visibleEmployees: employees, safetyRecords, setSafetyRecords, user, permissions } = useAppContext();
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedMonth, setSelectedMonth] = useState("Jan");
+  const [selectedMonth, setSelectedMonth] = useState(currentMonthShort());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
 

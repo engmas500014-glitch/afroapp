@@ -19,7 +19,7 @@ import {
   Loader2,
 } from "lucide-react";
 
-import { parseFlexibleDate } from "../lib/utils";
+import { parseFlexibleDate, currentMonthShort } from "../lib/utils";
 import { getEmailServerUrl, ccForProject } from "../lib/emailServer";
 
 export function OtherCostPage() {
@@ -33,7 +33,7 @@ export function OtherCostPage() {
     setSalaryOverrides,
     projectManagers,
   } = useAppContext();
-  const [selectedMonth, setSelectedMonth] = useState("Jan");
+  const [selectedMonth, setSelectedMonth] = useState(currentMonthShort());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [searchTerm, setSearchTerm] = useState("");
   const [isSendingAll, setIsSendingAll] = useState(false);

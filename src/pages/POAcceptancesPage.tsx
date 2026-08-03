@@ -3,6 +3,7 @@ import { Card, CardHeader, CardTitle, Button, Input } from "../components/ui";
 import { useAppContext, POAcceptance } from "../store/AppContext";
 import { Plus, Trash2, Save, ChevronDown, ChevronRight, AlertTriangle, AlertCircle, X, Search, Edit2, Eye, Download, Upload, List } from "lucide-react";
 import { parseCsv } from "../lib/salaryImport";
+import { currentMonthShort } from "../lib/utils";
 
 export function POAcceptancesPage() {
   const { poAcceptances, setPoAcceptances, employees, salaryOverrides, safetyRecords, user, permissions } = useAppContext();
@@ -15,7 +16,7 @@ export function POAcceptancesPage() {
 
   const canManage = hasPermission("PO Acceptances", "Manage PO Acceptances") || user?.role === "Admin" || user?.role === "HR" || user?.role === "Manager";
   const canExport = hasPermission("PO Acceptances", "Export PO Acceptances") || user?.role === "Admin" || user?.role === "HR" || user?.role === "Manager";
-  const [selectedMonth, setSelectedMonth] = useState("Jan");
+  const [selectedMonth, setSelectedMonth] = useState(currentMonthShort());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
   

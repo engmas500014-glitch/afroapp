@@ -18,3 +18,11 @@ export function parseFlexibleDate(dateStr: string | null | undefined): Date | nu
   return null;
 }
 
+
+export const MONTHS_SHORT = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+// Short name of the current month — the default for the month filters.
+export const currentMonthShort = () => MONTHS_SHORT[new Date().getMonth()];
