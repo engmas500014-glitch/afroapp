@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Card, CardHeader, CardTitle, Button, Input } from "../components/ui";
 import { useAppContext, POAcceptance } from "../store/AppContext";
-import { Plus, Trash2, Save, ChevronDown, ChevronRight, AlertTriangle, AlertCircle, X, Search, Edit2, Eye, Download, Upload, List } from "lucide-react";
+import { Plus, Trash2, Save, ChevronDown, ChevronRight, AlertTriangle, AlertCircle, X, Search, Edit2, Eye, Download, Upload, List, FileCheck } from "lucide-react";
 import { parseCsv } from "../lib/salaryImport";
 import { currentMonthShort } from "../lib/utils";
 
@@ -971,10 +971,13 @@ export function POAcceptancesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex items-center gap-4 pb-2 border-b border-border">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <FileCheck className="h-6 w-6" />
+        </div>
         <div>
           <h2 className="text-2xl font-bold tracking-tight">PO Acceptances</h2>
-          <p className="text-muted-fg">
+          <p className="text-muted-fg text-sm mt-0.5">
             Manage PO Acceptances for each month.
           </p>
         </div>
@@ -1037,7 +1040,7 @@ export function POAcceptancesPage() {
               </Button>
               {canExport && (
                 <Button onClick={handleExportYear} size="sm" variant="outline" className="gap-2 h-8">
-                  <Download className="w-4 h-4" /> Export
+                  <Download className="w-4 h-4" /> Export {selectedYear}
                 </Button>
               )}
             </div>
@@ -1055,7 +1058,8 @@ export function POAcceptancesPage() {
                 className="pl-9 bg-input-bg"
               />
             </div>
-            <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* PO setup */}
               <Button onClick={() => setShowAddNewPo(true)} size="sm" variant="outline" className="gap-2 relative">
                 <Plus className="w-4 h-4" /> Add New PO
                 {unusedPosCount > 0 && (
@@ -1068,6 +1072,9 @@ export function POAcceptancesPage() {
                 <Eye className="w-4 h-4" /> View Unused PO
               </Button>
 
+              <span className="hidden lg:block h-6 w-px bg-border mx-1" />
+
+              {/* PO amounts */}
               <Button onClick={() => {
                 setAllocationModalAmounts({});
                 setShowAddPo(true);
@@ -1111,6 +1118,9 @@ export function POAcceptancesPage() {
                   </span>
                 )}
               </Button>
+              <span className="hidden lg:block h-6 w-px bg-border mx-1" />
+
+              {/* This month's data in / out */}
               {canManage && (
                 <>
                   <input
@@ -1127,9 +1137,12 @@ export function POAcceptancesPage() {
               )}
               {canExport && (
                 <Button onClick={handleExport} size="sm" variant="outline" className="gap-2" disabled={filteredRecords.length === 0}>
-                  <Download className="w-4 h-4" /> Export
+                  <Download className="w-4 h-4" /> Export {selectedMonth}
                 </Button>
               )}
+
+              <span className="hidden lg:block h-6 w-px bg-border mx-1" />
+
               {canManage && (
                 <Button onClick={handleAddRow} size="sm" className="gap-2">
                   <Plus className="w-4 h-4" /> Add Row
