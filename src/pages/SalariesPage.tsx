@@ -187,7 +187,7 @@ export function SalariesPage() {
       topHero: emp.id === "EMP-001" ? 1000 : 0,
       gift: selectedMonth === "Mar" ? 500 : 0,
       retro: 0,
-      mobile: 334.21,
+      mobile: 0,
     };
     const currentNetSalary = calculateProratedSalary(emp);
     const topHero = overrides.topHero || (emp.id === "EMP-001" ? 1000 : 0);
@@ -265,7 +265,7 @@ export function SalariesPage() {
             topHero: emp.id === "EMP-001" ? 1000 : 0,
             gift: selectedMonth === "Mar" ? 500 : 0,
             retro: 0,
-            mobile: 334.21,
+            mobile: 0,
           };
           const currentNetSalary = calculateProratedSalary(emp);
           const topHero = overrides.topHero || (emp.id === "EMP-001" ? 1000 : 0);
@@ -381,7 +381,7 @@ export function SalariesPage() {
       topHero: e.id === "EMP-001" ? 1000 : 0,
       gift: selectedMonth === "Mar" ? 500 : 0,
       retro: 0,
-      mobile: 334.21,
+      mobile: 0,
     };
     const topHero = overrides.topHero || (e.id === "EMP-001" ? 1000 : 0);
     const total =
@@ -472,14 +472,14 @@ export function SalariesPage() {
         topHero: emp.id === "EMP-001" ? 1000 : 0,
         gift: selectedMonth === "Mar" ? 500 : 0,
         retro: 0,
-        mobile: 334.21,
+        mobile: 0,
       };
 
       const ot = overrides.ot || 0;
       const topHero = overrides.topHero || (emp.id === "EMP-001" ? 1000 : 0);
       const gift = overrides.gift || 0;
       const retro = overrides.retro || 0;
-      const mobile = overrides.mobile !== undefined ? overrides.mobile : 334.21;
+      const mobile = overrides.mobile !== undefined ? overrides.mobile : 0;
 
       const total = currentNetSalary + ot + topHero + gift + retro + mobile;
 
@@ -655,7 +655,7 @@ export function SalariesPage() {
                       : 0;
                 const retro = overrides !== undefined ? overrides.retro : 0;
                 const mobile =
-                  overrides !== undefined ? overrides.mobile : 334.21;
+                  overrides !== undefined ? overrides.mobile : 0;
 
                 const total =
                   currentNetSalary +

@@ -185,7 +185,7 @@ export function OtherCostPage() {
       topHero: emp.id === "EMP-001" ? 1000 : 0,
       gift: selectedMonth === "Mar" ? 500 : 0,
       retro: 0,
-      mobile: 334.21,
+      mobile: 0,
       laptop: 0,
     };
     const currentNetSalary = calculateProratedSalary(emp);
@@ -268,7 +268,7 @@ export function OtherCostPage() {
             topHero: emp.id === "EMP-001" ? 1000 : 0,
             gift: selectedMonth === "Mar" ? 500 : 0,
             retro: 0,
-            mobile: 334.21,
+            mobile: 0,
             laptop: 0,
           };
           const currentNetSalary = calculateProratedSalary(emp);
@@ -400,7 +400,7 @@ export function OtherCostPage() {
           : 0;
     const retro = overrides !== undefined ? overrides.retro : 0;
     const mobile =
-      overrides !== undefined ? overrides.mobile : 334.21;
+      overrides !== undefined ? overrides.mobile : 0;
     const laptop =
       overrides !== undefined && overrides.laptop !== undefined
         ? overrides.laptop
@@ -467,7 +467,7 @@ export function OtherCostPage() {
             : 0;
       const retro = overrides !== undefined ? overrides.retro : 0;
       const mobile =
-        overrides !== undefined ? overrides.mobile : 334.21;
+        overrides !== undefined ? overrides.mobile : 0;
       const laptop =
         overrides !== undefined && overrides.laptop !== undefined
           ? overrides.laptop
@@ -622,7 +622,7 @@ export function OtherCostPage() {
                       : 0;
                 const retro = overrides !== undefined ? overrides.retro : 0;
                 const mobile =
-                  overrides !== undefined ? overrides.mobile : 334.21;
+                  overrides !== undefined ? overrides.mobile : 0;
                 const laptop =
                   overrides !== undefined && overrides.laptop !== undefined
                     ? overrides.laptop

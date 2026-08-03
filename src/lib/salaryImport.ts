@@ -113,7 +113,7 @@ export function parseSalaryImport(
       topHero: iHero >= 0 ? toNumber(row[iHero]) : prev.topHero || 0,
       gift: iGift >= 0 ? toNumber(row[iGift]) : prev.gift || 0,
       retro: iRetro >= 0 ? toNumber(row[iRetro]) : prev.retro || 0,
-      mobile: iMobile >= 0 ? toNumber(row[iMobile]) : prev.mobile ?? 334.21,
+      mobile: iMobile >= 0 ? toNumber(row[iMobile]) : prev.mobile ?? 0,
     };
     // PO fields are stored as string lists; the export joins them with " | ".
     if (iPo >= 0) next.poNumbers = splitList(row[iPo]);

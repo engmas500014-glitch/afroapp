@@ -135,7 +135,7 @@ export function DashboardPage() {
       const topHero = ov?.topHero || 0;
       const gift = ov ? ov.gift || 0 : month === "Mar" ? 500 : 0;
       const retro = ov?.retro || 0;
-      const mobile = ov ? ov.mobile || 0 : 334.21;
+      const mobile = ov ? ov.mobile || 0 : 0;
       const laptop = ov?.laptop !== undefined ? ov.laptop : ov?.bonus || 0;
       const otherCostNet = ov?.otherCostNet || 0;
 

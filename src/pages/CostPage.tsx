@@ -144,7 +144,7 @@ export function CostPage() {
       topHero: empId === "EMP-001" ? 1000 : 0,
       gift: selectedMonth === "Mar" ? 500 : 0,
       retro: 0,
-      mobile: 334.21,
+      mobile: 0,
       poNumbers: [],
       poAmountRequests: []
     };
@@ -249,7 +249,7 @@ export function CostPage() {
         topHero: emp.id === "EMP-001" ? 1000 : 0,
         gift: selectedMonth === "Mar" ? 500 : 0,
         retro: 0,
-        mobile: 334.21,
+        mobile: 0,
         laptop: 0,
         otherCostNet: 0,
       };
@@ -465,7 +465,7 @@ export function CostPage() {
                     topHero: emp.id === "EMP-001" ? 1000 : 0,
                     gift: selectedMonth === "Mar" ? 500 : 0,
                     retro: 0,
-                    mobile: 334.21,
+                    mobile: 0,
                     laptop: 0,
                     otherCostNet: 0
                   };

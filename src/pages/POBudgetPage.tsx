@@ -266,7 +266,7 @@ export function POBudgetPage() {
         actualOT += 0;
         actualGift += budget.month === "Mar" ? 500 : 0;
         actualRetro += 0;
-        mobileAllowance += 334.21;
+        mobileAllowance += 0;
         actualTopHero += 0;
       }
     });
