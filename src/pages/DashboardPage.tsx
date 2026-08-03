@@ -45,11 +45,16 @@ export function DashboardPage() {
     ),
   ).sort();
 
-  const availableYears: number[] = Array.from(new Set(poBudgets.map((b) => Number(b.year))));
-  if (availableYears.length === 0) {
-    availableYears.push(new Date().getFullYear());
-  }
-  availableYears.sort((a: number, b: number) => b - a);
+  // Offer every year the data covers, plus the current one. Building this from
+  // poBudgets alone left the picker stuck on whatever years that table happened
+  // to hold, even when the acceptances were for another year.
+  const availableYears: number[] = Array.from(
+    new Set<number>([
+      ...poAcceptances.map((a) => Number(a.year)),
+      ...poBudgets.map((b) => Number(b.year)),
+      new Date().getFullYear(),
+    ].filter((y) => Number.isFinite(y))),
+  ).sort((a: number, b: number) => b - a);
 
   // Default to current year if available, otherwise latest available year
   const defaultYear = availableYears.includes(new Date().getFullYear())
