@@ -1151,7 +1151,9 @@ export function POAcceptancesPage() {
             </div>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm data-table min-w-[1300px]">
+            {/* min-width must cover the sum of the column widths below, or the
+                browser squeezes them and truncates the inputs' contents. */}
+            <table className="w-full text-sm data-table min-w-[1860px]">
               <thead>
                 <tr className="bg-muted text-muted-fg uppercase text-[10px] tracking-wider text-left border-b">
                   <th className="px-4 py-3 font-semibold w-40">PO Number</th>
@@ -1165,7 +1167,7 @@ export function POAcceptancesPage() {
                   <th className="px-4 py-3 font-semibold w-40">Invoice NO</th>
                   <th className="px-4 py-3 font-semibold w-40">Invoice Date</th>
                   <th className="px-4 py-3 font-semibold w-40">Collect Date</th>
-                  <th className="px-4 py-3 font-semibold w-32">Collect State</th>
+                  <th className="px-4 py-3 font-semibold w-40">Collect State</th>
                   <th className="px-4 py-3 font-semibold w-16 text-center">Actions</th>
                 </tr>
               </thead>
