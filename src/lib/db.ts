@@ -2,17 +2,20 @@ import { supabase } from './supabase';
 import { Employee, SafetyRecord, AccountItem, POBudget, SalaryRecord, Escalation, PermissionNode, POAcceptance, ProjectConfig, User } from '../store/AppContext';
 
 export const loadDataFromSupabase = async () => {
+  // Always order by id: Postgres gives no row order without ORDER BY, and it
+  // shifts after updates. PO cost apportionment consumes each PO's capacity in
+  // employee order, so an unstable order made the figures change on refresh.
   const results = await Promise.all([
-    supabase.from('employees').select('*'),
-    supabase.from('safety_records').select('*'),
-    supabase.from('accounts').select('*'),
-    supabase.from('po_budgets').select('*'),
-    supabase.from('salary_records').select('*'),
-    supabase.from('escalations').select('*'),
-    supabase.from('permissions').select('*'),
-    supabase.from('po_acceptances').select('*'),
-    supabase.from('fin_config').select('*'),
-    supabase.from('users').select('*')
+    supabase.from('employees').select('*').order('id'),
+    supabase.from('safety_records').select('*').order('id'),
+    supabase.from('accounts').select('*').order('id'),
+    supabase.from('po_budgets').select('*').order('id'),
+    supabase.from('salary_records').select('*').order('id'),
+    supabase.from('escalations').select('*').order('id'),
+    supabase.from('permissions').select('*').order('id'),
+    supabase.from('po_acceptances').select('*').order('id'),
+    supabase.from('fin_config').select('*').order('id'),
+    supabase.from('users').select('*').order('id')
   ]);
 
   results.forEach((res, i) => {
@@ -192,6 +195,9 @@ const fetchAllIds = async (tableName: string): Promise<string[]> => {
     const { data, error } = await supabase
       .from(tableName)
       .select('id')
+      // Ordering is required for range paging to be stable — without it pages
+      // can repeat or skip rows, which would delete the wrong records.
+      .order('id')
       .range(from, from + pageSize - 1);
     if (error) {
       console.warn(`Error fetching ${tableName} ids:`, error);
