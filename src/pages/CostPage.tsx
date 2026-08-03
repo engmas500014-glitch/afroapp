@@ -511,7 +511,10 @@ export function CostPage() {
                     <tr key={emp.id} className="border-b border-border hover:bg-muted/30">
                       <td className="sticky left-0 shadow-[1px_0_0_0_var(--color-border)] bg-card-bg z-40 text-left px-4 py-3">
                         <div className="font-medium text-ink">{emp.name}</div>
-                        <div className="text-[10px] text-muted-fg mt-0.5">{emp.hrCode} • {emp.position}</div>
+                        <div className="text-[10px] text-muted-fg mt-0.5">
+                          {emp.hrCode} • {emp.position}
+                          {emp.project ? ` • ${emp.project}` : ""}
+                        </div>
                       </td>
                       <td className="text-left px-4 py-3">
                         {isEditingPoNumber ? (
