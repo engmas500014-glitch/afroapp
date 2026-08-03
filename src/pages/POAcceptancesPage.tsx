@@ -305,7 +305,8 @@ export function POAcceptancesPage() {
       "HR Code",
       "Employee Name",
       "Account",
-      "Project"
+      "Project",
+      "Apportioned Cost"
     ];
 
     const csvRows = [headers.join(",")];
@@ -341,7 +342,7 @@ export function POAcceptancesPage() {
       const mappedEmployees = record.poNumber ? (poEmployees[record.poNumber] || []) : [];
 
       if (mappedEmployees.length === 0) {
-        const row = [...baseRowData, "", "", "", ""].map(val => `"${val}"`).join(",");
+        const row = [...baseRowData, "", "", "", "", ""].map(val => `"${val}"`).join(",");
         csvRows.push(row);
       } else {
         mappedEmployees.forEach(emp => {
@@ -350,7 +351,8 @@ export function POAcceptancesPage() {
             emp.hrCode || "",
             emp.name || "",
             emp.account || "",
-            emp.project || ""
+            emp.project || "",
+            emp.cost || 0
           ].map(val => `"${val}"`).join(",");
           csvRows.push(row);
         });
@@ -454,7 +456,8 @@ export function POAcceptancesPage() {
       "HR Code",
       "Employee Name",
       "Account",
-      "Project"
+      "Project",
+      "Apportioned Cost"
     ];
 
     const csvRows = [headers.join(",")];
@@ -492,7 +495,7 @@ export function POAcceptancesPage() {
       const mappedEmployees = record.poNumber ? (poEmployees[record.poNumber] || []) : [];
 
       if (mappedEmployees.length === 0) {
-        const row = [...baseRowData, "", "", "", ""].map(val => `"${val}"`).join(",");
+        const row = [...baseRowData, "", "", "", "", ""].map(val => `"${val}"`).join(",");
         csvRows.push(row);
       } else {
         mappedEmployees.forEach(emp => {
@@ -501,7 +504,8 @@ export function POAcceptancesPage() {
             emp.hrCode || "",
             emp.name || "",
             emp.account || "",
-            emp.project || ""
+            emp.project || "",
+            emp.cost || 0
           ].map(val => `"${val}"`).join(",");
           csvRows.push(row);
         });
